@@ -191,6 +191,19 @@ export const supabaseApi: Api = {
     return data ? loadOwnClaim(data.id as string) : null;
   },
 
+  async getPublicClaim(claimId) {
+    const { data, error } = await db().from('claims').select(CLAIM_COLUMNS).eq('id', claimId).maybeSingle();
+    fail(error);
+    return data ? toClaim(data) : null;
+  },
+
+  async findClaimByCode(postId, code) {
+    const { data, error } = await db().rpc('find_claim_by_code', { p_post_id: postId, p_code: code.trim() });
+    fail(error);
+    const row = (data as Record<string, unknown>[] | null)?.[0];
+    return row ? { ...toClaim(row), ticket_code: code.trim().toUpperCase() } : null;
+  },
+
   async listClaimsForPost(postId) {
     const { data, error } = await db()
       .from('claims')

@@ -316,6 +316,18 @@ export const mockApi: Api = {
     return c ? withQr(c) : null;
   },
 
+  async getPublicClaim(claimId) {
+    state = load();
+    const c = state.claims.find((x) => x.id === claimId);
+    return c ? { ...c, ticket_code: null, ticket_sig: null } : null;
+  },
+
+  async findClaimByCode(postId, code) {
+    state = load();
+    const c = state.claims.find((x) => x.post_id === postId && x.ticket_code === code.trim().toUpperCase());
+    return c ? { ...c, ticket_sig: null } : null;
+  },
+
   async listClaimsForPost(postId) {
     state = load();
     return state.claims

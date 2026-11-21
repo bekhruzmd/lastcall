@@ -25,6 +25,10 @@ export interface Api {
   resolveLotteryIfDue(postId: string): Promise<void>;
   getClaim(claimId: string): Promise<Claim | null>;
   getMyClaimForPost(postId: string): Promise<Claim | null>;
+  /** Officer side: any claim by id, without ticket secrets. */
+  getPublicClaim(claimId: string): Promise<Claim | null>;
+  /** Officer side: manual fallback — find a won claim on this post by its 6-char code. */
+  findClaimByCode(postId: string, code: string): Promise<Claim | null>;
   listClaimsForPost(postId: string): Promise<Claim[]>;
   markPickedUp(claimId: string): Promise<void>;
   closePost(postId: string): Promise<void>;
