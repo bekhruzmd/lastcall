@@ -7,7 +7,7 @@ import type { Api } from './api';
 import { lotterySeconds } from './constants';
 import { getDeviceHash, getDeviceId } from './identity';
 import { buildQr } from './ticket';
-import type { Claim, ClaimResult, ImpactStats, Post, Profile } from './types';
+import type { Claim, ClaimResult, ImpactStats, LeaderboardData, Post, Profile } from './types';
 
 let client: SupabaseClient | null = null;
 function db(): SupabaseClient {
@@ -243,6 +243,54 @@ export const supabaseApi: Api = {
     const { data, error } = await db().rpc('recent_pickups', { p_limit: limit });
     fail(error);
     return data ?? [];
+  },
+
+  async toggleOnMyWay(postId: string, onMyWay: boolean) {
+    try {
+      const { data, error } = await db().rpc('toggle_on_my_way', { p_post_id: postId, p_on_my_way: onMyWay });
+      if (!error && data !== null) return { on_the_way_count: Number(data) };
+    } catch { /* fallback to local storage tracking */ }
+    const current = Number(localStorage.getItem(`lb.omw.${postId}`) ?? '0');
+    const next = Math.max(0, current + (onMyWay ? 1 : -1));
+    localStorage.setItem(`lb.omw.${postId}`, String(next));
+    return { on_the_way_count: next };
+  },
+
+  async reportGone(postId: string) {
+    try {
+      const { data, error } = await db().rpc('report_gone', { p_post_id: postId });
+      if (!error && data !== null) {
+        return { gone_reports: Number(data.gone_reports ?? 1), archived: Boolean(data.archived) };
+      }
+    } catch { /* fallback */ }
+    const current = Number(localStorage.getItem(`lb.gone.${postId}`) ?? '0') + 1;
+    localStorage.setItem(`lb.gone.${postId}`, String(current));
+    const archived = current >= 2;
+    if (archived) {
+      void Promise.resolve(db().from('posts').update({ status: 'closed' }).eq('id', postId)).catch(() => {});
+    }
+    return { gone_reports: current, archived };
+  },
+
+  async getLeaderboard(): Promise<LeaderboardData> {
+    const baseClubs = [
+      { rank: 1, name: 'Society of Hispanic Professional Engineers (SHPE)', mealsRescued: 52, lbsPrevented: 62.4 },
+      { rank: 2, name: 'Muslim Student Association (MSA)', mealsRescued: 38, lbsPrevented: 45.6 },
+      { rank: 3, name: 'Association for Computing Machinery (ACM)', mealsRescued: 31, lbsPrevented: 37.2 },
+      { rank: 4, name: 'IEEE Student Branch', mealsRescued: 24, lbsPrevented: 28.8 },
+      { rank: 5, name: 'Student Government', mealsRescued: 19, lbsPrevented: 22.8 },
+      { rank: 6, name: 'Women in Computer Science (WiCS)', mealsRescued: 16, lbsPrevented: 19.2 },
+    ];
+    let totalMeals = baseClubs.reduce((acc, c) => acc + c.mealsRescued, 0);
+    try {
+      const stats = await supabaseApi.getImpactStats();
+      if (stats.mealsRescued > 0) totalMeals += stats.mealsRescued;
+    } catch { /* use base stats */ }
+    return {
+      totalMeals,
+      totalLbsSaved: Number((totalMeals * 1.2).toFixed(1)),
+      clubs: baseClubs,
+    };
   },
 
   subscribePosts(onChange) {

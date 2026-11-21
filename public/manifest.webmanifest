@@ -1,0 +1,17 @@
+{
+  "name": "Leftover Bulls",
+  "short_name": "LeftoverBulls",
+  "description": "USF Campus Food Rescue — fast, fair, and verified.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF8F2",
+  "theme_color": "#0B5D3B",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

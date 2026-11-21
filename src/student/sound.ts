@@ -57,7 +57,11 @@ export function setMuted(muted: boolean): void {
 export function playNewPostChime(): void {
   if (isMuted()) return;
   const ctx = getAudioContext();
-  if (!ctx || ctx.state !== 'running') return;
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    void ctx.resume();
+  }
+  if (ctx.state !== 'running') return;
 
   try {
     const now = ctx.currentTime;

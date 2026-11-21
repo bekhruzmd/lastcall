@@ -56,7 +56,7 @@ describe('officer offline pickup queue', () => {
     queue.queuePickup(pickup);
     listClaimsForPost.mockRejectedValue(new Error('Network unavailable'));
     await queue.syncPickups();
-    expect(queue.readQueue()).toEqual([pickup]);
+    expect(queue.readQueue()).toEqual([{ ...pickup, issue: 'Network unavailable' }]);
     listClaimsForPost.mockResolvedValue([{ id: 'claim-a', post_id: 'post-a', status: 'won' }]);
     await queue.syncPickups();
     expect(queue.readQueue()).toEqual([]);
@@ -68,4 +68,44 @@ describe('officer offline pickup queue', () => {
     expect(queue.queuePickup(pickup)).toBe(false);
     expect(queue.readQueue()).toEqual([pickup]);
   });
+
+  it('explains expired pickups and continues syncing other tickets', async () => {
+    const queue = await import('./pickupQueue');
+    queue.queuePickup(pickup);
+    queue.queuePickup({ ...pickup, claimId: 'claim-b', code: 'ABCD23' });
+    listClaimsForPost.mockResolvedValue([
+      { id: 'claim-a', post_id: 'post-a', status: 'expired' },
+      { id: 'claim-b', post_id: 'post-a', status: 'won' },
+    ]);
+    await queue.syncPickups();
+    expect(markPickedUp).toHaveBeenCalledExactlyOnceWith('claim-b');
+    expect(queue.readQueue()).toEqual([{ ...pickup, issue: expect.stringContaining('expired') }]);
+    vi.resetModules();
+    expect((await import('./pickupQueue')).readQueue()[0].issue).toContain('expired');
+  });
+
+  it('retains a record when pickup fails after a successful status check', async () => {
+    const queue = await import('./pickupQueue');
+    queue.queuePickup(pickup);
+    listClaimsForPost.mockResolvedValue([{ id: 'claim-a', post_id: 'post-a', status: 'won' }]);
+    markPickedUp.mockRejectedValueOnce(new Error('Connection lost'));
+    await queue.syncPickups();
+    expect(queue.readQueue()[0].issue).toBe('Connection lost');
+    await queue.syncPickups();
+    expect(queue.readQueue()).toEqual([]);
+  });
+
+  it('does not lose a new pickup queued while a request is in flight', async () => {
+    const queue = await import('./pickupQueue');
+    queue.queuePickup(pickup);
+    let finish!: (claims: unknown[]) => void;
+    listClaimsForPost.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    const sync = queue.syncPickups();
+    const second = { ...pickup, claimId: 'claim-b' };
+    queue.queuePickup(second);
+    finish([{ id: 'claim-a', post_id: 'post-a', status: 'won' }]);
+    await sync;
+    expect(queue.readQueue()).toEqual([second]);
+  });
+
 });

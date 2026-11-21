@@ -4,18 +4,22 @@ export const DIET_TAGS: DietTag[] = [
   'vegetarian',
   'vegan',
   'halal',
-  'kosher',
   'gluten_free',
+  'dairy_free',
+  'nut_free',
   'contains_nuts',
+  'kosher',
 ];
 
 export const DIET_LABELS: Record<DietTag, string> = {
   vegetarian: 'Vegetarian',
   vegan: 'Vegan',
-  halal: 'Halal',
-  kosher: 'Kosher',
-  gluten_free: 'Gluten-free',
+  halal: 'Halal-friendly',
+  gluten_free: 'Gluten-Free',
+  dairy_free: 'Dairy-Free',
+  nut_free: 'Nut-Free',
   contains_nuts: 'Contains nuts',
+  kosher: 'Kosher',
 };
 
 // Draft list of USF Tampa buildings — to be confirmed (CONTRACT §5).
@@ -33,11 +37,12 @@ export const BUILDINGS = [
   'Cooper Hall (CPR)',
   'Education (EDU)',
   'Juniper-Poplar Hall (JPH)',
+  'Judy Genshaft Honors College (HON)',
   'Recreation Center (REC)',
   'Patel Center (CGS)',
 ];
 
-export const DURATIONS_MIN = [15, 30, 60] as const;
+export const DURATIONS_MIN = [15, 30, 60, 120] as const;
 
 export const LOTTERY_SECONDS = 45;
 export const DEMO_LOTTERY_SECONDS = 20;

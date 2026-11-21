@@ -6,6 +6,7 @@ import type {
   Claim,
   ClaimResult,
   ImpactStats,
+  LeaderboardData,
   NewPostInput,
   Post,
   Profile,
@@ -35,6 +36,12 @@ export interface Api {
   getImpactStats(): Promise<ImpactStats>;
   /** Recent pickups for the board ticker, newest first. */
   listRecentPickups(limit?: number): Promise<{ display_name: string; org_name: string; picked_up_at: string }[]>;
+  /** Foot traffic counter: Bulls heading to this food drop. */
+  toggleOnMyWay(postId: string, onMyWay: boolean): Promise<{ on_the_way_count: number }>;
+  /** Community status: report food is completely gone. Auto-archives when >= 2. */
+  reportGone(postId: string): Promise<{ gone_reports: number; archived: boolean }>;
+  /** Club sustainability leaderboard. */
+  getLeaderboard(): Promise<LeaderboardData>;
 
   // Realtime (CONTRACT §8). Each returns an unsubscribe function.
   subscribePosts(onChange: (post: Post) => void): () => void;

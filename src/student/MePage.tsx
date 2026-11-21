@@ -5,6 +5,7 @@ import { api } from '../shared/api';
 import { DIET_LABELS, DIET_TAGS } from '../shared/constants';
 import type { DietTag, Profile } from '../shared/types';
 import StudentHeader from './StudentHeader';
+import StudentFooter from './StudentFooter';
 import './student.css';
 
 export default function MePage() {
@@ -88,7 +89,7 @@ export default function MePage() {
     <div className="student-shell">
       <StudentHeader displayName={displayName || profile?.display_name} />
 
-      <main className="student-content">
+      <main id="main-content" className="student-content">
         <div className="profile-container">
           <div className="ticket-back-nav">
             <Link to="/" className="ticket-back-btn">
@@ -221,6 +222,7 @@ export default function MePage() {
           )}
         </div>
       </main>
+      <StudentFooter />
     </div>
   );
 }

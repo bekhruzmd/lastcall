@@ -38,6 +38,29 @@ describe('verifyTicket', () => {
     expect(r.reason).toBe('expired');
   });
 
+  it('expires exactly at the signed expiry second', async () => {
+    expect((await verifyTicket(qr, pub, payload.e - 1)).valid).toBe(true);
+    expect((await verifyTicket(qr, pub, payload.e)).reason).toBe('expired');
+  });
+
+  it.each([
+    { c: '' },
+    { p: '' },
+    { k: '000000' },
+    { k: 'ABC' },
+    { e: 123.5 },
+    { e: -1 },
+  ])('rejects malformed fields even with a valid signature: %j', async patch => {
+    const malformed = { ...payload, ...patch };
+    const signed = buildQr(malformed, await signPayload(malformed, secret));
+    expect(await verifyTicket(signed, pub)).toMatchObject({ valid: false, reason: 'malformed' });
+  });
+
+  it('rejects tickets signed by an unrelated key', async () => {
+    const otherKey = b64urlEncode(await ed.getPublicKeyAsync(ed.utils.randomSecretKey()));
+    expect((await verifyTicket(qr, otherKey)).reason).toBe('bad_signature');
+  });
+
   it('rejects garbage', async () => {
     expect((await verifyTicket('hello', pub)).reason).toBe('malformed');
   });

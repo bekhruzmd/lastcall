@@ -4,6 +4,7 @@ import { api } from '../shared/api';
 import { cachedFoodEvents, fetchFoodEvents } from '../shared/events';
 import type { FoodEvent } from '../shared/types';
 import StudentHeader from './StudentHeader';
+import StudentFooter from './StudentFooter';
 import './events.css';
 
 const CAMPUSES = ['Tampa', 'St Petersburg', 'Sarasota-Manatee', 'All'] as const;
@@ -103,7 +104,7 @@ export default function EventsPage() {
   return (
     <div className="student-shell">
       <StudentHeader displayName={displayName} />
-      <main className="student-content events-page">
+      <main id="main-content" className="student-content events-page">
         <section className="events-intro">
           <h1>Food at upcoming events</h1>
           <p>
@@ -188,6 +189,7 @@ export default function EventsPage() {
           </p>
         )}
       </main>
+      <StudentFooter />
     </div>
   );
 }

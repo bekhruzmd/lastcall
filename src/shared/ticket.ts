@@ -70,10 +70,10 @@ export async function verifyTicket(
     sig = b64urlDecode(parts[2]);
     payload = JSON.parse(new TextDecoder().decode(msg));
     if (
-      typeof payload.c !== 'string' ||
-      typeof payload.p !== 'string' ||
-      typeof payload.k !== 'string' ||
-      typeof payload.e !== 'number'
+      typeof payload.c !== 'string' || payload.c.length === 0 ||
+      typeof payload.p !== 'string' || payload.p.length === 0 ||
+      typeof payload.k !== 'string' || !/^[A-HJ-NP-Z2-9]{6}$/.test(payload.k) ||
+      !Number.isSafeInteger(payload.e) || payload.e <= 0
     ) {
       return { valid: false, reason: 'malformed' };
     }

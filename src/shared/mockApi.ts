@@ -52,17 +52,22 @@ function seed(): State {
     room: '109',
     portions_total: 10,
     portions_left: 10,
+    estimated_servings: 10,
     diet_tags: [],
+    allergens: ['Dairy', 'Gluten'],
+    on_the_way_count: 3,
+    gone_reports: 0,
+    is_catered: true,
     photo_url: null,
     poster_hash: 'demo-officer',
     created_at: iso(now - 5 * 60_000),
     lottery_ends_at: iso(now - 4 * 60_000),
-    expires_at: iso(now + 25 * 60_000),
+    expires_at: iso(now + 115 * 60_000),
     status: 'open',
     ...o,
   });
   const posts = [
-    post({ title: '12 slices cheese pizza', portions_total: 12, portions_left: 7 }),
+    post({ title: '12 slices cheese pizza', portions_total: 12, portions_left: 7, estimated_servings: 7, on_the_way_count: 3 }),
     post({
       org_name: 'Muslim Student Association',
       title: 'Chicken shawarma wraps',
@@ -70,7 +75,10 @@ function seed(): State {
       room: '2708',
       portions_total: 8,
       portions_left: 5,
+      estimated_servings: 5,
       diet_tags: ['halal'],
+      allergens: ['Halal Poultry'],
+      on_the_way_count: 1,
     }),
   ];
   // Win history so the weighting is visible.
@@ -100,10 +108,11 @@ function load(): State {
   } catch {
     /* fall through */
   }
-  return seed();
+  return state;
 }
 
-let state: State = load();
+let state: State = seed();
+state = load();
 const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('lb-mock') : null;
 type Listener = (kind: 'post' | 'claim', row: Post | Claim) => void;
 const listeners = new Set<Listener>();
@@ -148,11 +157,11 @@ async function issueTicket(claim: Claim, post: Post) {
 function expireDue() {
   const now = Date.now();
   for (const p of state.posts) {
-    if ((p.status === 'open' || p.status === 'lottery') && Date.parse(p.expires_at) <= now) {
+    if (p.status !== 'expired' && Date.parse(p.expires_at) <= now) {
       p.status = 'expired';
       state.claims
         .filter((c) => c.post_id === p.id && c.status === 'won')
-        .forEach((c) => (c.status = 'expired'));
+        .forEach((c) => { c.status = 'expired'; emit('claim', c); });
       emit('post', p);
     }
   }
@@ -160,6 +169,7 @@ function expireDue() {
 
 async function resolveLottery(postId: string) {
   state = load();
+  expireDue();
   const post = state.posts.find((p) => p.id === postId);
   if (!post || post.status !== 'lottery' || Date.now() < Date.parse(post.lottery_ends_at)) return;
   const pending = state.claims.filter((c) => c.post_id === postId && c.status === 'pending');
@@ -233,6 +243,7 @@ export const mockApi: Api = {
   async createPost(input) {
     state = load();
     const now = Date.now();
+    const durationMin = input.duration_min || 120;
     const post: Post = {
       id: crypto.randomUUID(),
       org_name: input.org_name,
@@ -241,12 +252,18 @@ export const mockApi: Api = {
       room: input.room,
       portions_total: input.portions_total,
       portions_left: input.portions_total,
+      estimated_servings: input.portions_total,
       diet_tags: input.diet_tags,
+      dietary_tags: input.diet_tags,
+      allergens: input.allergens ?? [],
+      on_the_way_count: 0,
+      gone_reports: 0,
+      is_catered: input.is_catered ?? true,
       photo_url: input.photo_url ?? null,
       poster_hash: await getDeviceHash(),
       created_at: iso(now),
       lottery_ends_at: iso(now + lotterySeconds() * 1000),
-      expires_at: iso(now + input.duration_min * 60_000),
+      expires_at: iso(now + durationMin * 60_000),
       status: 'lottery',
     };
     state.posts.unshift(post);
@@ -256,6 +273,7 @@ export const mockApi: Api = {
 
   async getPost(postId) {
     state = load();
+    expireDue();
     const p = state.posts.find((x) => x.id === postId);
     return p ? { ...p } : null;
   },
@@ -263,7 +281,16 @@ export const mockApi: Api = {
   async listActivePosts() {
     state = load();
     expireDue();
-    return state.posts.filter((p) => p.status === 'lottery' || p.status === 'open').map((p) => ({ ...p }));
+    return state.posts
+      .filter((p) => (p.status === 'lottery' || p.status === 'open') && (p.gone_reports ?? 0) < 2)
+      .map((p) => ({
+        ...p,
+        estimated_servings: p.estimated_servings ?? p.portions_left,
+        on_the_way_count: p.on_the_way_count ?? 0,
+        gone_reports: p.gone_reports ?? 0,
+        allergens: p.allergens ?? [],
+        is_catered: p.is_catered ?? true,
+      }));
   },
 
   async claim(postId): Promise<ClaimResult> {
@@ -306,30 +333,35 @@ export const mockApi: Api = {
 
   async getClaim(claimId) {
     state = load();
+    expireDue();
     const c = state.claims.find((x) => x.id === claimId);
     return c ? withQr(c) : null;
   },
 
   async getMyClaimForPost(postId) {
     state = load();
+    expireDue();
     const c = state.claims.find((x) => x.post_id === postId && x.device_id === getDeviceId());
     return c ? withQr(c) : null;
   },
 
   async getPublicClaim(claimId) {
     state = load();
+    expireDue();
     const c = state.claims.find((x) => x.id === claimId);
     return c ? { ...c, ticket_code: null, ticket_sig: null } : null;
   },
 
   async findClaimByCode(postId, code) {
     state = load();
+    expireDue();
     const c = state.claims.find((x) => x.post_id === postId && x.ticket_code === code.trim().toUpperCase());
     return c ? { ...c, ticket_sig: null } : null;
   },
 
   async listClaimsForPost(postId) {
     state = load();
+    expireDue();
     return state.claims
       .filter((c) => c.post_id === postId)
       .map((c) => ({ ...c, ticket_code: null, ticket_sig: null }));
@@ -337,6 +369,7 @@ export const mockApi: Api = {
 
   async markPickedUp(claimId) {
     state = load();
+    expireDue();
     const c = state.claims.find((x) => x.id === claimId);
     if (!c) throw new Error('Unknown ticket');
     if (c.status === 'picked_up') throw new Error('Already picked up');
@@ -356,6 +389,7 @@ export const mockApi: Api = {
 
   async getImpactStats() {
     state = load();
+    expireDue();
     const active = state.posts.filter((p) => p.status === 'lottery' || p.status === 'open');
     return {
       mealsRescued: state.claims.filter((c) => c.status === 'picked_up').length,
@@ -375,6 +409,71 @@ export const mockApi: Api = {
         org_name: state.posts.find((p) => p.id === c.post_id)?.org_name ?? '',
         picked_up_at: c.picked_up_at!,
       }));
+  },
+
+  async toggleOnMyWay(postId: string, onMyWay: boolean) {
+    state = load();
+    const p = state.posts.find((x) => x.id === postId);
+    if (p) {
+      const current = p.on_the_way_count ?? 0;
+      p.on_the_way_count = Math.max(0, current + (onMyWay ? 1 : -1));
+      emit('post', p);
+      return { on_the_way_count: p.on_the_way_count };
+    }
+    return { on_the_way_count: 0 };
+  },
+
+  async reportGone(postId: string) {
+    state = load();
+    const p = state.posts.find((x) => x.id === postId);
+    if (p) {
+      p.gone_reports = (p.gone_reports ?? 0) + 1;
+      const archived = p.gone_reports >= 2;
+      if (archived) {
+        p.status = 'archived';
+      }
+      emit('post', p);
+      return { gone_reports: p.gone_reports, archived };
+    }
+    return { gone_reports: 0, archived: false };
+  },
+
+  async getLeaderboard() {
+    state = load();
+    const clubMap = new Map<string, number>();
+    const baseClubs: Record<string, number> = {
+      'Society of Hispanic Professional Engineers (SHPE)': 52,
+      'Muslim Student Association (MSA)': 38,
+      'Association for Computing Machinery (ACM)': 31,
+      'IEEE Student Branch': 24,
+      'Student Government': 19,
+      'Women in Computer Science (WiCS)': 16,
+    };
+    for (const [k, v] of Object.entries(baseClubs)) clubMap.set(k, v);
+
+    for (const c of state.claims) {
+      if (c.status === 'picked_up' && c.post_id !== 'history') {
+        const post = state.posts.find((p) => p.id === c.post_id);
+        if (post?.org_name) {
+          clubMap.set(post.org_name, (clubMap.get(post.org_name) ?? 0) + 1);
+        }
+      }
+    }
+
+    const clubs = [...clubMap.entries()]
+      .map(([name, mealsRescued]) => ({
+        rank: 0,
+        name,
+        mealsRescued,
+        lbsPrevented: Number((mealsRescued * 1.2).toFixed(1)),
+      }))
+      .sort((a, b) => b.mealsRescued - a.mealsRescued)
+      .map((c, i) => ({ ...c, rank: i + 1 }));
+
+    const totalMeals = clubs.reduce((acc, c) => acc + c.mealsRescued, 0);
+    const totalLbsSaved = Number((totalMeals * 1.2).toFixed(1));
+
+    return { totalMeals, totalLbsSaved, clubs };
   },
 
   subscribePosts(onChange) {

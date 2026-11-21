@@ -14,8 +14,11 @@
   padding: 0 3.5vw;
   border-bottom: 1px solid var(--line);
 }
-.board__brand { font-family: var(--font-display); font-size: clamp(30px,3vw,56px); font-weight: 800; letter-spacing:-.035em; }
+.board__brand { font-family: var(--font-display); font-size: clamp(30px,3vw,56px); font-weight: 800; letter-spacing:-.035em; text-decoration: none; color: inherit; }
 .board__brand span { color:var(--green); }
+.board__header-actions { display: flex; align-items: center; gap: 24px; }
+.board__header-link { font-size: clamp(14px, 1.1vw, 20px); font-weight: 650; color: var(--ink-2); text-decoration: none; }
+.board__header-link:hover { color: var(--green); text-decoration: underline; }
 .board__live { display:flex; align-items:center; gap:12px; font-weight:700; font-size:clamp(14px,1.15vw,22px); color: var(--ink-2); }
 .board__live i { width:12px; height:12px; border-radius:50%; background:var(--red); animation: board-live 2s ease-in-out infinite; }
 @keyframes board-live { 50% { opacity:.35; } }

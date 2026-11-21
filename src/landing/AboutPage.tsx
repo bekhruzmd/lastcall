@@ -1,13 +1,18 @@
+import { Link } from 'react-router-dom';
 import './AboutPage.css';
 
 export default function AboutPage() {
   return (
-    <main className="about">
+    <main id="main-content" className="about">
       <header className="about__nav">
-        <a className="about__brand" href="/" aria-label="Leftover Bulls home">
+        <Link className="about__brand" to="/" aria-label="Leftover Bulls home">
           Leftover <span>Bulls</span>
-        </a>
-        <a className="about__action" href="/">Find food</a>
+        </Link>
+        <div className="about__nav-links">
+          <Link className="about__nav-link" to="/board">Impact board</Link>
+          <Link className="about__nav-link" to="/post">Post leftovers</Link>
+          <Link className="about__action" to="/">Find food</Link>
+        </div>
       </header>
 
       <section className="about__hero">
@@ -58,11 +63,37 @@ export default function AboutPage() {
           </p>
           <p>
             Students who have received fewer meals in the last seven days get a higher chance.
-            A private priority choice can double that chance for students prioritizing groceries.
-            Names and priority choices are never shown on the board.
+            A private priority choice doubles the draw weight for students prioritizing groceries.
+            The board shows first names for pickups, but never priority choices.
           </p>
         </div>
       </section>
+
+      <section className="about__cta" aria-labelledby="cta-title">
+        <div className="about__cta-card">
+          <h2 id="cta-title">Get involved on campus</h2>
+          <p>
+            Whether you are a student looking for a good meal or a student organization with leftover catering,
+            Leftover Bulls makes campus food recovery fast, fair, and safe.
+          </p>
+          <div className="about__cta-actions">
+            <Link to="/" className="about__action">Find food now</Link>
+            <Link to="/post" className="about__action-outline">Post leftovers (Organizers)</Link>
+            <Link to="/board" className="about__action-link">View live impact board →</Link>
+          </div>
+        </div>
+      </section>
+
+      <footer className="about__footer">
+        <div className="about__footer-inner">
+          <p>
+            Need ongoing groceries? USF Feed-A-Bull Pantry is located in <strong>MSC 0002</strong>, open Mon–Fri 10 AM – 4 PM.
+          </p>
+          <p className="about__footer-copy">
+            Leftover Bulls · Built for the University of South Florida community
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }

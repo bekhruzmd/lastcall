@@ -1,16 +1,39 @@
-import { ArrowRight, Check, Clock, Hourglass, MapPin, Plus, Shuffle, Utensils } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  Check,
+  Clock,
+  Hourglass,
+  MapPin,
+  Navigation,
+  Plus,
+  ShieldCheck,
+  Shuffle,
+  Utensils,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../shared/api';
-import { BUILDINGS, DIET_LABELS, DIET_TAGS } from '../shared/constants';
+import { BUILDINGS, DIET_LABELS } from '../shared/constants';
 import type { Claim, DietTag, Post, Profile } from '../shared/types';
 import StudentHeader from './StudentHeader';
+import StudentFooter from './StudentFooter';
 import OnboardingModal from './OnboardingModal';
 import { playNewPostChime } from './sound';
 import './student.css';
 
 const FILTER_BUILDING_KEY = 'lb.filter.building';
 const FILTER_DIET_KEY = 'lb.filter.diet';
+const OMW_STORAGE_KEY = 'lb.omw.posts';
+const GONE_STORAGE_KEY = 'lb.reported_gone.posts';
+
+const FEATURED_DIET_FILTERS: { id: DietTag; label: string }[] = [
+  { id: 'vegetarian', label: 'Vegetarian' },
+  { id: 'halal', label: 'Halal-friendly' },
+  { id: 'gluten_free', label: 'Gluten-Free' },
+  { id: 'dairy_free', label: 'Dairy-Free' },
+  { id: 'nut_free', label: 'Nut-Free' },
+];
 
 function loadStoredBuilding(): string {
   try {
@@ -34,7 +57,8 @@ function loadStoredDiet(): DietTag[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return parsed.filter((t): t is DietTag => DIET_TAGS.includes(t));
+      const valid = new Set<DietTag>(['vegetarian', 'vegan', 'halal', 'gluten_free', 'dairy_free', 'nut_free', 'contains_nuts', 'kosher']);
+      return parsed.filter((t): t is DietTag => valid.has(t));
     }
   } catch {
     /* ignore parse errors */
@@ -45,6 +69,44 @@ function loadStoredDiet(): DietTag[] {
 function storeDiet(tags: DietTag[]) {
   try {
     localStorage.setItem(FILTER_DIET_KEY, JSON.stringify(tags));
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+function loadStoredOnMyWay(): Set<string> {
+  try {
+    const raw = localStorage.getItem(OMW_STORAGE_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function storeOnMyWay(set: Set<string>) {
+  try {
+    localStorage.setItem(OMW_STORAGE_KEY, JSON.stringify([...set]));
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+function loadStoredReportedGone(): Set<string> {
+  try {
+    const raw = localStorage.getItem(GONE_STORAGE_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function storeReportedGone(set: Set<string>) {
+  try {
+    localStorage.setItem(GONE_STORAGE_KEY, JSON.stringify([...set]));
   } catch {
     /* ignore storage errors */
   }
@@ -65,6 +127,44 @@ function formatCountdown(targetIso: string, nowMs: number): { text: string; rema
   return { text: `${mins}:${padSec}`, remainingSec: totalSec };
 }
 
+function getFreshnessData(createdAtIso: string, expiresAtIso: string, nowMs: number) {
+  const createdMs = Date.parse(createdAtIso);
+  const expiresMs = Date.parse(expiresAtIso);
+  const totalWindowMs = Math.max(1, expiresMs - (Number.isNaN(createdMs) ? expiresMs - 2 * 60 * 60 * 1000 : createdMs));
+  const remainingMs = Math.max(0, expiresMs - nowMs);
+  const ratio = Math.min(1, Math.max(0, remainingMs / totalWindowMs));
+  const percent = Math.round(ratio * 100);
+
+  let timeText = '0m left';
+  if (remainingMs <= 0) {
+    timeText = 'Expired';
+  } else {
+    const totalMinutes = Math.floor(remainingMs / (60 * 1000));
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    if (hours > 0) {
+      timeText = `${hours}h ${mins}m left`;
+    } else {
+      timeText = `${mins}m left`;
+    }
+  }
+
+  // Color-shifting: green (>50%) -> yellow (20-50%) -> red (<=20%)
+  let statusColorClass = 'freshness-green';
+  if (percent <= 20) {
+    statusColorClass = 'freshness-red';
+  } else if (percent <= 50) {
+    statusColorClass = 'freshness-yellow';
+  }
+
+  return {
+    percent,
+    timeText,
+    statusColorClass,
+    isExpired: remainingMs <= 0,
+  };
+}
+
 export default function FeedPage() {
   const navigate = useNavigate();
 
@@ -80,6 +180,10 @@ export default function FeedPage() {
   // Filters
   const [selectedBuilding, setSelectedBuilding] = useState<string>(loadStoredBuilding);
   const [selectedDietTags, setSelectedDietTags] = useState<DietTag[]>(loadStoredDiet);
+
+  // Community foot-traffic & gone reports
+  const [onMyWaySet, setOnMyWaySet] = useState<Set<string>>(loadStoredOnMyWay);
+  const [reportedGoneSet, setReportedGoneSet] = useState<Set<string>>(loadStoredReportedGone);
 
   // New post highlights
   const [newPostIds, setNewPostIds] = useState<Set<string>>(new Set());
@@ -256,12 +360,92 @@ export default function FeedPage() {
     storeDiet([]);
   };
 
-  // Filtered Posts
+  // Community action handlers
+  const handleToggleOnMyWay = useCallback(
+    async (postId: string) => {
+      const isCurrentlyOnTheWay = onMyWaySet.has(postId);
+      const nextIsOnTheWay = !isCurrentlyOnTheWay;
+
+      setOnMyWaySet((prev) => {
+        const next = new Set(prev);
+        if (nextIsOnTheWay) {
+          next.add(postId);
+        } else {
+          next.delete(postId);
+        }
+        storeOnMyWay(next);
+        return next;
+      });
+
+      // Optimistic count update
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
+          const currentCount = p.on_the_way_count ?? 0;
+          return {
+            ...p,
+            on_the_way_count: Math.max(0, currentCount + (nextIsOnTheWay ? 1 : -1)),
+          };
+        }),
+      );
+
+      try {
+        const res = await api.toggleOnMyWay(postId, nextIsOnTheWay);
+        if (typeof res?.on_the_way_count === 'number') {
+          setPosts((prev) =>
+            prev.map((p) => (p.id === postId ? { ...p, on_the_way_count: res.on_the_way_count } : p)),
+          );
+        }
+      } catch (err) {
+        console.error('Failed to toggle on-my-way status:', err);
+      }
+    },
+    [onMyWaySet],
+  );
+
+  const handleReportGone = useCallback(
+    async (postId: string) => {
+      if (reportedGoneSet.has(postId)) return;
+
+      setReportedGoneSet((prev) => {
+        const next = new Set(prev);
+        next.add(postId);
+        storeReportedGone(next);
+        return next;
+      });
+
+      // Optimistically increment gone_reports; if >= 2, immediately archive and remove from view
+      setPosts((prev) => {
+        const target = prev.find((p) => p.id === postId);
+        const newReports = (target?.gone_reports ?? 0) + 1;
+        if (newReports >= 2) {
+          return prev.filter((p) => p.id !== postId);
+        }
+        return prev.map((p) => (p.id === postId ? { ...p, gone_reports: newReports } : p));
+      });
+
+      try {
+        const res = await api.reportGone(postId);
+        if (res?.archived) {
+          setPosts((prev) => prev.filter((p) => p.id !== postId));
+        }
+      } catch (err) {
+        console.error('Failed to report food gone:', err);
+      }
+    },
+    [reportedGoneSet],
+  );
+
+  // Filtered Posts: auto-expire (now > expires_at), archived, or gone_reports >= 2
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
-      // Exclude expired or fully closed posts with no leftovers unless user already won
+      // 1. Food safety timer: auto-expire when nowMs exceeds expires_at
       const isExpired = Date.parse(post.expires_at) <= nowMs;
-      if (isExpired && post.status !== 'open') return false;
+      if (isExpired) return false;
+      if (post.status === 'expired' || post.status === 'archived') return false;
+
+      // 2. No ghost food: auto-filter drops reported gone by 2+ Bulls
+      if ((post.gone_reports ?? 0) >= 2) return false;
 
       // Filter by building
       if (selectedBuilding !== 'ALL' && post.building !== selectedBuilding) {
@@ -270,7 +454,8 @@ export default function FeedPage() {
 
       // Filter by diet: post must satisfy all selected diet requirements
       if (selectedDietTags.length > 0) {
-        const matchesAllDiets = selectedDietTags.every((req) => post.diet_tags.includes(req));
+        const tags = post.dietary_tags ?? post.diet_tags ?? [];
+        const matchesAllDiets = selectedDietTags.every((req) => tags.includes(req));
         if (!matchesAllDiets) return false;
       }
 
@@ -333,7 +518,7 @@ export default function FeedPage() {
         activePostTitle={activePostForWinningClaim}
       />
 
-      <main className="student-content">
+      <main id="main-content" className="student-content">
         {/* Filters Section */}
         <section className="filter-section" aria-label="Filter food listings">
           <div className="filter-row">
@@ -368,18 +553,30 @@ export default function FeedPage() {
               )}
             </div>
             <div className="filter-chips" role="group" aria-label="Dietary filter options">
-              {DIET_TAGS.map((tag) => {
-                const active = selectedDietTags.includes(tag);
+              <button
+                type="button"
+                className={`filter-chip ${selectedDietTags.length === 0 ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedDietTags([]);
+                  storeDiet([]);
+                }}
+                aria-pressed={selectedDietTags.length === 0}
+              >
+                {selectedDietTags.length === 0 && <Check size={16} aria-hidden="true" />}
+                <span>All</span>
+              </button>
+              {FEATURED_DIET_FILTERS.map(({ id, label }) => {
+                const active = selectedDietTags.includes(id);
                 return (
                   <button
-                    key={tag}
+                    key={id}
                     type="button"
                     className={`filter-chip ${active ? 'active' : ''}`}
-                    onClick={() => handleToggleDietTag(tag)}
+                    onClick={() => handleToggleDietTag(id)}
                     aria-pressed={active}
                   >
                     {active ? <Check size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
-                    <span>{DIET_LABELS[tag]}</span>
+                    <span>{label}</span>
                   </button>
                 );
               })}
@@ -391,9 +588,9 @@ export default function FeedPage() {
         <section className="feed-list" aria-label="Available campus food posts">
           <div className="feed-header-row">
             <h1 className="feed-title">
-              <span>Leftovers now</span>
+              <span>Active rescues</span>
               <span className="feed-count-badge">
-                {filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}
+                {filteredPosts.length} {filteredPosts.length === 1 ? 'drop' : 'drops'}
               </span>
             </h1>
           </div>
@@ -407,15 +604,19 @@ export default function FeedPage() {
               <span className="empty-icon" aria-hidden="true">
                 <Utensils size={24} />
               </span>
-              <h2 className="empty-title">No food right now — we'll ping you</h2>
+              <h2 className="empty-title">No leftover food to rescue right now</h2>
               <p className="empty-desc">
                 When USF clubs finish meetings and events with extra food, listings pop up here in real time.
                 Keep this tab open with sound on to catch the next chime!
               </p>
-              {(selectedBuilding !== 'ALL' || selectedDietTags.length > 0) && (
+              {(selectedBuilding !== 'ALL' || selectedDietTags.length > 0) ? (
                 <button type="button" className="btn-primary" onClick={handleResetFilters}>
-                  Clear filters to see all posts
+                  Clear filters to see all rescues
                 </button>
+              ) : (
+                <Link to="/events" className="btn-primary">
+                  View food at upcoming events
+                </Link>
               )}
             </div>
           ) : (
@@ -427,7 +628,11 @@ export default function FeedPage() {
 
               const isLottery = post.status === 'lottery';
               const lotteryCount = formatCountdown(post.lottery_ends_at, nowMs);
-              const expiryCount = formatCountdown(post.expires_at, nowMs);
+              const freshness = getFreshnessData(post.created_at, post.expires_at, nowMs);
+              const isOnMyWay = onMyWaySet.has(post.id);
+              const hasReportedGone = reportedGoneSet.has(post.id);
+              const servingsLeft = post.estimated_servings ?? post.portions_left ?? post.portions_total;
+              const bullsHeading = post.on_the_way_count ?? 0;
 
               return (
                 <article
@@ -440,13 +645,13 @@ export default function FeedPage() {
                     <div className="post-card-banner lottery">
                       <span className="lottery-live-indicator">
                         <span className="live-dot" aria-hidden="true" />
-                        Fair-share draw · no rush to be first
+                        Fair-share draw · zero food waste
                       </span>
                       <span>{lotteryCount.text} left</span>
                     </div>
                   ) : post.status === 'closed' || post.portions_left === 0 ? (
                     <div className="post-card-banner open">
-                      <span>All claimed</span>
+                      <span>All rescued</span>
                     </div>
                   ) : (
                     <div className="post-card-banner open">
@@ -457,7 +662,10 @@ export default function FeedPage() {
                   <div className="post-card-body">
                     <div className="post-card-meta">
                       <span className="post-org-name">{post.org_name}</span>
-                      {isLottery && <span className="post-time-ago">Draw in {lotteryCount.text}</span>}
+                      <span className="food-trust-badge" title="Catered / commercially sealed food within the 2-hour safety window">
+                        <ShieldCheck size={13} aria-hidden="true" />
+                        <span>Catered / Sealed · 2-Hr Safety Window</span>
+                      </span>
                     </div>
 
                     <h2 id={`post-title-${post.id}`} className="post-title">
@@ -473,15 +681,66 @@ export default function FeedPage() {
                       </span>
                     </div>
 
+                    {/* Live Portion & Foot-Traffic Counter: "~10 servings left · 3 Bulls heading there" */}
                     <div className="post-portions-row">
                       <div className="portions-left-text">
-                        <span className="portions-left-highlight">{post.portions_left}</span> of{' '}
-                        {post.portions_total} portions left
+                        <span className="portions-live-counter">
+                          ~{servingsLeft} servings left · {bullsHeading} {bullsHeading === 1 ? 'Bull' : 'Bulls'} heading there
+                        </span>
                       </div>
-                      <div className="expiry-countdown" title="Food expires at this time">
-                        <Clock size={15} aria-hidden="true" />
-                        <span>{expiryCount.text}</span>
+                    </div>
+
+                    {/* Live Freshness Countdown Bar */}
+                    <div
+                      className="freshness-bar-container"
+                      aria-label={`Food safety freshness: ${freshness.timeText}`}
+                    >
+                      <div className="freshness-bar-meta">
+                        <span className="freshness-bar-label">
+                          <Clock size={13} aria-hidden="true" /> Freshness window
+                        </span>
+                        <span className={`freshness-bar-time ${freshness.statusColorClass}`}>
+                          {freshness.timeText}
+                        </span>
                       </div>
+                      <div
+                        className="freshness-progress-track"
+                        role="progressbar"
+                        aria-valuenow={freshness.percent}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label="Freshness countdown"
+                      >
+                        <div
+                          className={`freshness-progress-fill ${freshness.statusColorClass}`}
+                          style={{ width: `${freshness.percent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 1-Tap Community Action Row: "On My Way" and "It's Gone" */}
+                    <div className="community-action-row" role="group" aria-label="Portion foot traffic and drop status">
+                      <button
+                        type="button"
+                        className={`btn-community btn-on-my-way ${isOnMyWay ? 'active' : ''}`}
+                        onClick={() => handleToggleOnMyWay(post.id)}
+                        aria-pressed={isOnMyWay}
+                        title={isOnMyWay ? "Cancel 'On My Way'" : "Let other Bulls know you're heading there"}
+                      >
+                        <Navigation size={15} aria-hidden="true" />
+                        <span>{isOnMyWay ? 'Heading there' : 'On My Way'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`btn-community btn-its-gone ${hasReportedGone ? 'reported' : ''}`}
+                        onClick={() => handleReportGone(post.id)}
+                        disabled={hasReportedGone}
+                        title={hasReportedGone ? 'You reported this food is gone' : 'Report that all food is gone'}
+                      >
+                        <AlertCircle size={15} aria-hidden="true" />
+                        <span>{hasReportedGone ? 'Reported gone' : "It's Gone"}</span>
+                      </button>
                     </div>
 
                     {post.diet_tags && post.diet_tags.length > 0 && (
@@ -575,15 +834,15 @@ export default function FeedPage() {
                           className="claim-btn open"
                           onClick={() => handleClaim(post.id)}
                           disabled={isClaiming}
-                          aria-label={`Claim a portion of ${post.title}`}
+                          aria-label={`Rescue a portion of ${post.title}`}
                         >
-                          {isClaiming ? 'Claiming...' : 'Claim a portion'}
+                          {isClaiming ? 'Rescuing…' : 'Rescue a portion'}
                         </button>
                       </>
                     ) : (
                       // None left
                       <button type="button" className="claim-btn pending" disabled>
-                        <span>All claimed</span>
+                        <span>All rescued</span>
                       </button>
                     )}
 
@@ -600,7 +859,12 @@ export default function FeedPage() {
         </section>
       </main>
 
-      <OnboardingModal isOpen={showOnboarding} onSave={handleOnboardingSave} />
+      <StudentFooter />
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onSave={handleOnboardingSave}
+        onDismiss={() => setShowOnboarding(false)}
+      />
     </div>
   );
 }

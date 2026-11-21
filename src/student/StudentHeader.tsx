@@ -61,10 +61,13 @@ export default function StudentHeader({
 
       <nav className="student-tabs" aria-label="Student sections">
         <NavLink to="/" end className={({ isActive }) => `student-tab${isActive ? ' active' : ''}`}>
-          Leftovers now
+          Active rescues
         </NavLink>
         <NavLink to="/events" className={({ isActive }) => `student-tab${isActive ? ' active' : ''}`}>
           Food at events
+        </NavLink>
+        <NavLink to="/leaderboard" className={({ isActive }) => `student-tab${isActive ? ' active' : ''}`}>
+          Leaderboard
         </NavLink>
       </nav>
 

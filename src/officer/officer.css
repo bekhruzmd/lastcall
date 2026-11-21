@@ -4,8 +4,11 @@
 .officer-page a { color: var(--green); font-weight: 650; }
 .officer-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
 .officer-nav a { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
-.officer-nav a:first-child { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.officer-nav > a:first-child { font-family: var(--font-display); font-size: 1.05rem; font-weight: 750; letter-spacing: -0.02em; color: var(--ink); }
 .officer-nav a:hover { text-decoration: underline; }
+.officer-nav-links { display: flex; align-items: center; gap: 16px; }
+.officer-nav-links a { font-size: 0.9rem; color: var(--ink-2); font-weight: 600; }
+.officer-nav-links a:hover { color: var(--green); }
 
 .officer-page h1 { margin: 0 0 8px; font-size: clamp(1.9rem, 6vw, 2.5rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.025em; overflow-wrap: anywhere; }
 .officer-intro { max-width: 52ch; margin: 0 0 28px; color: var(--ink-2); }
@@ -55,6 +58,9 @@
 .officer-photo img { width: 110px; height: 80px; object-fit: cover; border-radius: var(--r-sm); }
 
 .officer-error { color: var(--red-ink); }
+.officer-safety-card { padding: 14px 16px; border-radius: var(--r-md); border: 1px solid rgba(11, 93, 59, 0.25); background: var(--green-tint); }
+.officer-checkbox-label { display: flex !important; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 0.9rem !important; font-weight: 500 !important; color: var(--green-deep); line-height: 1.45; }
+.officer-checkbox-label input[type="checkbox"] { width: 22px; height: 22px; min-height: 22px; margin: 2px 0 0; accent-color: var(--green); flex-shrink: 0; }
 .officer-notice { padding: 14px 16px; border-radius: var(--r-md); background: var(--gold-tint); color: var(--gold-ink); }
 .officer-notice button { margin: 8px 0 0 8px; }
 

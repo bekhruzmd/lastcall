@@ -20,13 +20,19 @@ export default function OfficerPage() {
   const [post, setPost] = useState<Post | null>(null);
   const [myHash, setMyHash] = useState<string | null>(null);
   useEffect(() => { void getDeviceHash().then(setMyHash); }, []);
-  const [claims, setClaims] = useState<Claim[]>([]);
-  const claimsRef = useRef<Claim[]>([]);
+  const [claims, setClaims] = useState<Claim[]>(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(`lb.officer.claims.${postId}`) ?? '[]');
+      if (Array.isArray(cached)) return cached;
+    } catch { /* Start without cached names. */ }
+    return [];
+  });
+  const claimsRef = useRef<Claim[]>(claims);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const [online, setOnline] = useState(navigator.onLine);
-  const [queued, setQueued] = useState(readQueue().length);
+  const [queued, setQueued] = useState(readQueue);
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
   const scanLock = useRef(false);
@@ -56,11 +62,21 @@ export default function OfficerPage() {
 
   useEffect(() => {
     let active = true;
-    try {
-      const cached: Claim[] = JSON.parse(localStorage.getItem(`lb.officer.claims.${postId}`) ?? '[]');
-      if (Array.isArray(cached)) { claimsRef.current = cached; setClaims(cached); }
-    } catch { /* Start without cached names. */ }
-    void refresh().catch(e => { if (active) { setError(message(e)); setLoaded(true); } });
+    async function loadInitial() {
+      try {
+        const [nextPost, nextClaims] = await Promise.all([api.getPost(postId), api.listClaimsForPost(postId)]);
+        if (!active) return;
+        setPost(nextPost);
+        saveClaims(nextClaims);
+        setLoaded(true);
+        setError('');
+      } catch (e) {
+        if (!active) return;
+        setError(message(e));
+        setLoaded(true);
+      }
+    }
+    void loadInitial();
     const stopPosts = api.subscribePosts(p => { if (p.id === postId) setPost(p); });
     const stopClaims = api.subscribeClaimsForPost(postId, claim => {
       saveClaims([...claimsRef.current.filter(c => c.id !== claim.id), claim]);
@@ -70,7 +86,7 @@ export default function OfficerPage() {
       setOnline(navigator.onLine);
       await syncPickups();
       if (active) {
-        setQueued(readQueue().length);
+        setQueued([...readQueue()]);
         if (navigator.onLine) void refresh().catch(e => setError(message(e)));
       }
     }
@@ -128,7 +144,7 @@ export default function OfficerPage() {
       }
       if (offlinePickup) {
         const persisted = queuePickup(pickup);
-        setQueued(readQueue().length);
+        setQueued([...readQueue()]);
         detail = persisted ? 'Verified offline. Pickup saved; it will sync when connected. Offline checks cannot see pickups on other devices.' : 'Verified offline. Keep this page open: storage is unavailable, so the pickup is saved only for this session.';
       }
       accepted.current.add(verified.claimId);
@@ -141,7 +157,7 @@ export default function OfficerPage() {
     } finally { setBusy(false); }
   }
   const scanHandler = useRef(acceptTicket);
-  scanHandler.current = acceptTicket;
+  useEffect(() => { scanHandler.current = acceptTicket; });
 
   useEffect(() => {
     // Load the decoder while connected so starting the scanner offline can work.
@@ -150,9 +166,22 @@ export default function OfficerPage() {
     }).catch(() => { /* Camera fallback remains available. */ });
   }, []);
 
+  function toggleCamera() {
+    if (!camera) {
+      if (!window.isSecureContext) {
+        setCameraError('Camera needs HTTPS. Use the 6-character code below.');
+        return;
+      }
+      setCameraError('');
+      setCamera(true);
+    } else {
+      setCamera(false);
+      setCameraError('');
+    }
+  }
+
   useEffect(() => {
-    if (!camera || !video.current) return;
-    if (!window.isSecureContext) { setCameraError('Camera needs HTTPS. Use the 6-character code below.'); return; }
+    if (!camera || !video.current || !window.isSecureContext) return;
     let active = true;
     const scanner = new QrScanner(video.current, scan => void scanHandler.current(scan.data), { preferredCamera: 'environment', returnDetailedScanResult: true, highlightScanRegion: true, maxScansPerSecond: 4 });
     void scanner.start().catch(() => { if (active) setCameraError('Camera unavailable. Allow camera access, or use the code below.'); });
@@ -199,14 +228,24 @@ export default function OfficerPage() {
   if (post.poster_hash !== myHash) return <main className="officer-page"><h1>Officer access</h1><p>Open this page on the device that posted these leftovers.</p><Link to="/">Back to the feed</Link></main>;
   const seconds = Math.max(0, Math.ceil((Date.parse(post.lottery_ends_at) - now) / 1000));
   const expired = now >= Date.parse(post.expires_at);
-  return <main className="officer-page">
-    <nav className="officer-nav"><Link to="/">Leftover Bulls</Link><Link to="/post">New post</Link></nav>
+  return <main id="main-content" className="officer-page">
+    <nav className="officer-nav">
+      <Link to="/">← Food feed</Link>
+      <div className="officer-nav-links">
+        <Link to="/post">New post</Link>
+        <Link to="/board">Impact board</Link>
+      </div>
+    </nav>
     <h1>{post.title}</h1><p className="officer-intro">{post.org_name} · {post.building} · {post.room}</p>
     {!online && <p className="officer-notice" role="status">Offline. Signed QR tickets still work on this device.</p>}
-    {queued > 0 && <p className="officer-notice" role="status">{queued} pickup{queued === 1 ? '' : 's'} waiting to sync. Keep this device handy.<button onClick={() => void syncPickups().then(() => setQueued(readQueue().length))}>Retry sync</button></p>}
+    {queued.length > 0 && <section className="officer-notice" aria-label="Saved offline pickups">
+      <p role="status">{queued.length} pickup{queued.length === 1 ? '' : 's'} saved on this device, not yet synced.</p>
+      {queued.some(pickup => pickup.issue) && <ul>{queued.filter(pickup => pickup.issue).map(pickup => <li key={pickup.claimId}>{pickup.name} — ticket {pickup.code}: {pickup.issue}</li>)}</ul>}
+      <button onClick={() => void syncPickups().then(() => setQueued([...readQueue()]))}>Retry sync</button>
+    </section>}
     {error && <p className="officer-error" role="alert">{error}</p>}
     <section className="officer-summary" aria-label="Post status"><div><strong>{post.portions_left}</strong><span>portions unclaimed</span></div><div><strong>{post.status === 'lottery' && !expired ? `${seconds}s` : expired ? 'Expired' : post.status === 'closed' ? 'Closed' : 'Open'}</strong><span>{post.status === 'lottery' && !expired ? 'until the fair-share draw' : 'for new claims'}</span></div></section>
-    <section className="officer-section"><h2>Check a ticket</h2><button className="officer-primary" disabled={busy} onClick={() => { setCameraError(''); setCamera(c => !c); }}>{camera ? 'Stop camera' : 'Scan ticket QR'}</button>
+    <section className="officer-section"><h2>Check a ticket</h2><button className="officer-primary" disabled={busy} onClick={toggleCamera}>{camera ? 'Stop camera' : 'Scan ticket QR'}</button>
       {camera && <div className="officer-camera"><video ref={video} muted playsInline aria-label="Ticket scanner camera" /><p>Hold the student’s QR inside the frame.</p></div>}
       {cameraError && <p role="alert" className="officer-error">{cameraError}</p>}
       <form className="officer-code" onSubmit={manual}><label>Or enter the 6-character code<input aria-label="6-character ticket code" autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={6} pattern="[A-HJ-NP-Z2-9]{6}" placeholder="K7P2QX" value={code} onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ''))} required /></label><button disabled={busy || code.length !== 6}>{busy ? 'Checking…' : 'Check code'}</button></form>

@@ -3,38 +3,10 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { api } from '../shared/api';
+import { loadTicketData, saveTicketCache } from './ticketData';
 import type { Claim, Post } from '../shared/types';
 import StudentHeader from './StudentHeader';
 import './student.css';
-
-interface CachedTicket {
-  claim: Claim;
-  post: Post | null;
-  savedAt: number;
-}
-
-function getCacheKey(claimId: string): string {
-  return `lb.ticket.${claimId}`;
-}
-
-function saveTicketCache(claimId: string, claim: Claim, post: Post | null) {
-  try {
-    const data: CachedTicket = { claim, post, savedAt: Date.now() };
-    localStorage.setItem(getCacheKey(claimId), JSON.stringify(data));
-  } catch {
-    /* ignore storage errors */
-  }
-}
-
-function loadTicketCache(claimId: string): CachedTicket | null {
-  try {
-    const raw = localStorage.getItem(getCacheKey(claimId));
-    if (raw) return JSON.parse(raw);
-  } catch {
-    /* ignore storage errors */
-  }
-  return null;
-}
 
 function formatExpiryCountdown(targetIso?: string | null, nowMs: number = Date.now()): {
   text: string;
@@ -65,6 +37,8 @@ export default function TicketPage() {
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreenQr, setIsFullscreenQr] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [qrError, setQrError] = useState(false);
 
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -79,6 +53,7 @@ export default function TicketPage() {
   // Fetch Claim & Post
   useEffect(() => {
     let mounted = true;
+    let latestPost: Post | null = null;
 
     async function loadTicket() {
       if (!claimId) {
@@ -89,50 +64,17 @@ export default function TicketPage() {
         return;
       }
 
+      setLoading(true);
+      setError(null);
       try {
-        // First check online API
-        let fetchedClaim: Claim | null = null;
-        try {
-          fetchedClaim = await api.getClaim(claimId);
-        } catch {
-          // Fall through to offline cache
-        }
-
-        if (fetchedClaim) {
-          if (!mounted) return;
-          setClaim(fetchedClaim);
-          setIsOfflineMode(false);
-
-          let fetchedPost: Post | null = null;
-          try {
-            fetchedPost = await api.getPost(fetchedClaim.post_id);
-            if (mounted) setPost(fetchedPost);
-          } catch {
-            /* post fetch error ignored */
-          }
-
-          saveTicketCache(claimId, fetchedClaim, fetchedPost);
-        } else {
-          // Attempt loading from offline cache
-          const cached = loadTicketCache(claimId);
-          if (cached && mounted) {
-            setClaim(cached.claim);
-            setPost(cached.post);
-            setIsOfflineMode(true);
-          } else if (mounted) {
-            setError('Ticket not found. Check your connection or claim list.');
-          }
-        }
+        const data = await loadTicketData(claimId);
+        if (!mounted) return;
+        latestPost = data.post;
+        setClaim(data.claim);
+        setPost(data.post);
+        setIsOfflineMode(data.offline);
       } catch (err) {
-        // Fallback to cache if available
-        const cached = loadTicketCache(claimId);
-        if (cached && mounted) {
-          setClaim(cached.claim);
-          setPost(cached.post);
-          setIsOfflineMode(true);
-        } else if (mounted) {
-          setError(err instanceof Error ? err.message : 'Could not load ticket.');
-        }
+        if (mounted) setError(err instanceof Error ? err.message : 'Could not load ticket.');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -144,7 +86,7 @@ export default function TicketPage() {
     const unsubscribe = api.subscribeMyClaims((updatedClaim) => {
       if (updatedClaim.id === claimId && mounted) {
         setClaim(updatedClaim);
-        saveTicketCache(claimId, updatedClaim, post);
+        saveTicketCache(claimId, updatedClaim, latestPost);
       }
     });
 
@@ -152,17 +94,14 @@ export default function TicketPage() {
       mounted = false;
       unsubscribe();
     };
-  }, [claimId, post]);
+  }, [claimId, retry]);
 
   // Generate QR Code data URL whenever claim QR string is available
   useEffect(() => {
-    let active = true;
     const qrString = claim?.qr;
+    if (!qrString) return;
 
-    if (!qrString) {
-      return;
-    }
-
+    let active = true;
     QRCode.toDataURL(qrString, {
       errorCorrectionLevel: 'M',
       margin: 2,
@@ -173,24 +112,48 @@ export default function TicketPage() {
       },
     })
       .then((url) => {
-        if (active) setQrDataUrl(url);
+        if (active) {
+          setQrDataUrl(url);
+          setQrError(false);
+        }
       })
-      .catch((err) => {
-        console.error('Failed to generate QR code:', err);
+      .catch(() => {
+        if (active) {
+          setQrDataUrl(null);
+          setQrError(true);
+        }
       });
 
     return () => {
       active = false;
     };
-  }, [claim?.qr]);
+  }, [claim?.qr, retry]);
+
+  // Close fullscreen QR on Escape key
+  useEffect(() => {
+    if (!isFullscreenQr) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreenQr(false);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isFullscreenQr]);
 
   const countdown = formatExpiryCountdown(post?.expires_at, nowMs);
+  const activeQrDataUrl = claim?.qr ? qrDataUrl : null;
+  const canShowTicket = claim?.status === 'won' && !countdown.isExpired;
+  const ticketMessage = claim?.status === 'picked_up' ? 'Already picked up'
+    : countdown.isExpired || claim?.status === 'expired' ? 'Ticket expired'
+    : claim?.status === 'pending' ? 'Waiting for the draw'
+    : claim?.status === 'lost' ? 'Not selected this time'
+    : qrError ? 'Could not display the QR. Try refreshing your ticket.'
+    : 'Your ticket is not ready yet. Try refreshing.';
 
   return (
     <div className="student-shell">
       <StudentHeader />
 
-      <main className="student-content">
+      <main id="main-content" className="student-content">
         <div className="ticket-container">
           <div className="ticket-back-nav">
             <Link to="/" className="ticket-back-btn">
@@ -215,9 +178,8 @@ export default function TicketPage() {
               </span>
               <h2 className="empty-title">Ticket not available</h2>
               <p className="empty-desc">{error || 'This ticket could not be found.'}</p>
-              <Link to="/" className="btn-primary">
-                Back to the feed
-              </Link>
+              <button className="btn-primary" onClick={() => setRetry(value => value + 1)}>Retry loading ticket</button>
+              <Link to="/" className="ticket-back-btn">Back to the feed</Link>
             </div>
           ) : (
             <>
@@ -232,28 +194,30 @@ export default function TicketPage() {
                 {/* QR Section */}
                 <div className="ticket-qr-section">
                   <div className="ticket-qr-frame">
-                    {qrDataUrl ? (
+                    {canShowTicket && activeQrDataUrl ? (
                       <img
-                        src={qrDataUrl}
+                        src={activeQrDataUrl}
                         alt={`QR code for ticket verification: ${claim.ticket_code || 'Claim'}`}
                       />
                     ) : (
-                      <div className="ticket-qr-placeholder">Generating QR…</div>
+                      <div className="ticket-qr-placeholder" role="status">{ticketMessage}</div>
                     )}
                   </div>
 
                   <span className="ticket-code-label">Pickup code</span>
                   <div className="ticket-code-display" aria-label={`Code: ${claim.ticket_code}`}>
-                    {claim.ticket_code ?? '------'}
+                    {canShowTicket ? claim.ticket_code ?? '------' : '------'}
                   </div>
 
                   <button
                     type="button"
                     onClick={() => setIsFullscreenQr(true)}
                     className="ticket-enlarge-btn"
+                    disabled={!canShowTicket || !activeQrDataUrl}
                   >
                     <Maximize2 size={16} aria-hidden="true" /> Enlarge QR for scanning
                   </button>
+                  {canShowTicket && (!claim.qr || qrError) && <button type="button" className="ticket-enlarge-btn" onClick={() => setRetry(value => value + 1)}>Refresh ticket</button>}
                 </div>
 
                 {/* Ticket Cutout Divider */}
@@ -297,6 +261,8 @@ export default function TicketPage() {
                       <TriangleAlert size={18} aria-hidden="true" />
                       <span>Ticket expired</span>
                     </div>
+                  ) : claim.status === 'pending' || claim.status === 'lost' ? (
+                    <div className="ticket-status-bar" role="status"><span>{ticketMessage}</span></div>
                   ) : (
                     <div className="ticket-status-bar won">
                       <span>Ready for pickup · show this screen to the host</span>
@@ -317,19 +283,20 @@ export default function TicketPage() {
               </div>
 
               {/* Fullscreen QR Modal */}
-              {isFullscreenQr && qrDataUrl && (
+              {isFullscreenQr && canShowTicket && activeQrDataUrl && (
                 <div
                   className="fullscreen-qr-overlay"
                   role="dialog"
                   aria-modal="true"
                   aria-label="Enlarged QR code for pickup scanning"
+                  onClick={() => setIsFullscreenQr(false)}
                 >
-                  <div className="fullscreen-qr-card">
+                  <div className="fullscreen-qr-card" onClick={(e) => e.stopPropagation()}>
                     <h2 className="fullscreen-qr-title">
                       {post?.title || 'Leftover Bulls Ticket'}
                     </h2>
                     <img
-                      src={qrDataUrl}
+                      src={activeQrDataUrl}
                       alt="Full screen QR code"
                       className="fullscreen-qr-img"
                     />

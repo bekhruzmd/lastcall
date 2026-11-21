@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { api } from '../shared/api';
 import type { ImpactStats, Post } from '../shared/types';
@@ -102,10 +103,15 @@ export default function BoardPage() {
   }, [stats.mealsRescued]);
 
   return (
-    <main className="board">
+    <main id="main-content" className="board">
       <header className="board__header">
-        <div className="board__brand">Leftover <span>Bulls</span></div>
-        <div className="board__live"><i aria-hidden="true" /> Live campus impact</div>
+        <Link to="/" className="board__brand" title="Return to student feed">
+          Leftover <span>Bulls</span>
+        </Link>
+        <div className="board__header-actions">
+          <Link to="/about" className="board__header-link">How it works</Link>
+          <div className="board__live"><i aria-hidden="true" /> Live campus impact</div>
+        </div>
       </header>
 
       <section className="board__grid">

@@ -6,9 +6,11 @@ export type DietTag =
   | 'halal'
   | 'kosher'
   | 'gluten_free'
-  | 'contains_nuts';
+  | 'contains_nuts'
+  | 'dairy_free'
+  | 'nut_free';
 
-export type PostStatus = 'lottery' | 'open' | 'closed' | 'expired';
+export type PostStatus = 'lottery' | 'open' | 'closed' | 'expired' | 'archived';
 
 export type ClaimStatus = 'pending' | 'won' | 'lost' | 'picked_up' | 'expired';
 
@@ -29,7 +31,10 @@ export interface Post {
   room: string;
   portions_total: number;
   portions_left: number;
+  estimated_servings?: number;
   diet_tags: DietTag[];
+  dietary_tags?: DietTag[];
+  allergens?: string[];
   photo_url: string | null;
   /** SHA-256 of the posting device's id (the raw id is never public). */
   poster_hash: string;
@@ -37,6 +42,9 @@ export interface Post {
   lottery_ends_at: string;
   expires_at: string;
   status: PostStatus;
+  on_the_way_count?: number;
+  gone_reports?: number;
+  is_catered?: boolean;
 }
 
 export interface Claim {
@@ -60,8 +68,10 @@ export interface NewPostInput {
   room: string;
   portions_total: number;
   diet_tags: DietTag[];
-  duration_min: 15 | 30 | 60;
+  duration_min: 15 | 30 | 60 | 120;
   photo_url?: string | null;
+  allergens?: string[];
+  is_catered?: boolean;
 }
 
 export type ClaimResult =
@@ -72,6 +82,19 @@ export interface ImpactStats {
   mealsRescued: number;
   activePosts: number;
   clubsActive: number;
+}
+
+export interface ClubLeaderboardEntry {
+  rank: number;
+  name: string;
+  mealsRescued: number;
+  lbsPrevented: number;
+}
+
+export interface LeaderboardData {
+  totalMeals: number;
+  totalLbsSaved: number;
+  clubs: ClubLeaderboardEntry[];
 }
 
 export interface VerifyResult {
