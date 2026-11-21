@@ -1324,7 +1324,7 @@
   gap: 12px;
 }
 
-.open-board-btn {
+.officer-page .open-board-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1341,7 +1341,8 @@
   transition: transform 180ms ease, scale 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
-.open-board-btn:hover {
+.officer-page .open-board-btn:hover {
+  color: #ffffff;
   background: var(--green-deep);
   transform: translateY(-1px);
 }
