@@ -637,15 +637,11 @@
   outline-offset: 1px;
 }
 
-/* One scrolling row on phones instead of a block of chips */
+/* Chips wrap onto as many rows as they need; nothing is cut off. */
 .filter-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin: 0 -16px;
-  padding: 2px 16px 4px;
-  scroll-padding-inline: 16px;
 }
 
 .filter-chips::-webkit-scrollbar {
@@ -654,7 +650,7 @@
 
 .filter-chip {
   flex-shrink: 0;
-  min-height: 44px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -675,7 +671,7 @@
 }
 
 .filter-chip:hover .lucide {
-  transform: scale(1.22) rotate(6deg);
+  transform: none;
 }
 
 .filter-chip:hover {
@@ -693,8 +689,7 @@
   background: var(--green);
   border-color: var(--green);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(11, 93, 59, 0.32);
-  animation: chip-pop 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: none;
 }
 
 @keyframes chip-pop {
@@ -2685,15 +2680,6 @@
   color: var(--ink-2);
 }
 
-.live-radar-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
-  animation: live-pulse 1.8s infinite;
-}
-
 /* Portions Capacity Meter & Progress (beautifului.dev style) */
 .portions-progress-container {
   display: flex;
@@ -2867,4 +2853,32 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Pills hold a few words on one line. Long values (org names) get an ellipsis
+   instead of wrapping into a two-line pill. */
+.leaderboard-hero-badge,
+.feed-clean-badge,
+.desktop-widget-badge,
+.feed-stat-pill,
+.food-trust-badge,
+.card-freshness-chip,
+.diet-tag-pill,
+.allergen-pill,
+.active-ticket-tag,
+.privacy-badge {
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desktop-stat-card.wide {
+  grid-column: 1 / -1;
+}
+
+/* Static headline numbers: proportional figures keep "," and "." tight. */
+.stat-num,
+.desktop-stat-val {
+  font-variant-numeric: proportional-nums;
 }

@@ -1554,3 +1554,20 @@
     font-size: 1rem;
   }
 }
+
+/* Pills hold a few words on one line; long org names get an ellipsis. */
+.officer-org-badge,
+.officer-header-badge,
+.ai-sparkle-pill,
+.ai-verified-badge,
+.field-ai-pill,
+.claim-portion-tag,
+.officer-status-badge,
+.ai-diet-chip,
+.ai-allergen-chip,
+.officer-nav-pill {
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

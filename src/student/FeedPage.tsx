@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../shared/api';
-import { BUILDINGS, DIET_LABELS } from '../shared/constants';
+import { BUILDINGS, DIET_LABELS, MEAL_VALUE_USD, formatUsd } from '../shared/constants';
 import type { Claim, DietTag, Post, Profile } from '../shared/types';
 import StudentHeader from './StudentHeader';
 import { IconSwap, NumberChange } from '../shared/motion';
@@ -632,6 +632,10 @@ export default function FeedPage() {
                   <span className="desktop-stat-val">~1.2 lbs</span>
                   <span className="desktop-stat-sub">Diverted / meal</span>
                 </div>
+                <div className="desktop-stat-card wide">
+                  <span className="desktop-stat-val">~{formatUsd(MEAL_VALUE_USD)}</span>
+                  <span className="desktop-stat-sub">Saved per rescued meal</span>
+                </div>
               </div>
               <Link to="/leaderboard" className="desktop-widget-cta">
                 View Org Leaderboard →
@@ -645,7 +649,6 @@ export default function FeedPage() {
             <header className="feed-clean-header" aria-label="Campus food rescue status">
               <div className="feed-clean-header-top">
                 <div className="feed-clean-badge">
-                  <span className="live-radar-dot" aria-hidden="true" />
                   <span>USF Food Rescue Radar</span>
                 </div>
                 <div className="feed-clean-pills">
@@ -779,7 +782,7 @@ export default function FeedPage() {
                             <span className="post-org-name">{post.org_name}</span>
                             <span className="food-trust-badge" title="Catered / commercially sealed food within the 2-hour safety window">
                               <ShieldCheck size={13} aria-hidden="true" />
-                              <span>Catered / Sealed · 2-Hr Safety Window</span>
+                              <span>Sealed · 2-hr window</span>
                             </span>
                           </div>
 
@@ -831,11 +834,11 @@ export default function FeedPage() {
                                   {DIET_LABELS[tag] || tag}
                                 </span>
                               ))}
-                              {post.allergens && post.allergens.length > 0 && (
-                                <span className="allergen-pill">
-                                  Contains: {post.allergens.join(', ')}
+                              {post.allergens && post.allergens.map((a) => (
+                                <span key={a} className="allergen-pill" title={`Contains ${a}`}>
+                                  Contains {a}
                                 </span>
-                              )}
+                              ))}
                             </div>
                           )}
 

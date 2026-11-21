@@ -62,7 +62,7 @@ export default function LeaderboardPage() {
         <section className="leaderboard-hero" aria-labelledby="leaderboard-title">
           <div className="leaderboard-hero-badge">
             <Leaf size={16} aria-hidden="true" />
-            <span>USF Food Sustainability & Zero Waste</span>
+            <span>Zero Waste USF</span>
           </div>
           <h1 id="leaderboard-title" className="leaderboard-title">
             Student Org Impact Leaderboard
@@ -148,7 +148,7 @@ export default function LeaderboardPage() {
                     <div className="club-rank-info">
                       <strong className="club-name">{club.name}</strong>
                       <span className="club-lbs">
-                        {club.lbsPrevented} lbs food waste diverted
+                        {club.lbsPrevented} lbs of food diverted
                       </span>
                       <span className="club-money">
                         {formatUsd(mealsToUsd(club.mealsRescued))} saved for students
