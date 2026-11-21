@@ -1,3 +1,4 @@
+import { ArrowLeft, Check, Lock, Plus, User, Utensils } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../shared/api';
@@ -91,29 +92,28 @@ export default function MePage() {
         <div className="profile-container">
           <div className="ticket-back-nav">
             <Link to="/" className="ticket-back-btn">
-              <span>← Back to food feed</span>
+              <ArrowLeft size={18} aria-hidden="true" />
+              <span>Food feed</span>
             </Link>
           </div>
 
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '4px 0 0' }}>
-            My Student Profile & Preferences
-          </h1>
+          <h1 className="page-title">Your profile</h1>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 16px', color: '#666' }}>
-              Loading preferences...
+            <div className="feed-loading" role="status">
+              Loading preferences…
             </div>
           ) : (
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={handleSave} className="profile-form">
               {/* Display Name Card */}
               <div className="profile-section-card">
                 <h2 className="profile-section-title">
-                  <span aria-hidden="true">👤</span>
-                  <span>Display Name</span>
+                  <User size={20} aria-hidden="true" />
+                  <span>Display name</span>
                 </h2>
                 <div className="form-group">
                   <label htmlFor="display-name" className="form-label">
-                    First Name
+                    First name
                   </label>
                   <input
                     id="display-name"
@@ -129,7 +129,7 @@ export default function MePage() {
                     required
                   />
                   <span className="form-helper">
-                    Visible to event hosts on the pickup roster when you claim food (≤ 20 characters).
+                    Shown to the host on their pickup list when you claim food. Up to 20 characters.
                   </span>
                 </div>
               </div>
@@ -137,10 +137,10 @@ export default function MePage() {
               {/* Diet Preferences Card */}
               <div className="profile-section-card">
                 <h2 className="profile-section-title">
-                  <span aria-hidden="true">🥗</span>
-                  <span>Dietary Preferences</span>
+                  <Utensils size={20} aria-hidden="true" />
+                  <span>Dietary preferences</span>
                 </h2>
-                <p style={{ margin: 0, fontSize: '0.88rem', color: '#555' }}>
+                <p className="profile-note">
                   Select the foods you prefer. We'll use these to customize your feed view.
                 </p>
                 <div className="filter-chips" role="group" aria-label="Dietary preferences">
@@ -154,7 +154,7 @@ export default function MePage() {
                         onClick={() => handleToggleDiet(tag)}
                         aria-pressed={active}
                       >
-                        <span>{active ? '✓' : '+'}</span>
+                        {active ? <Check size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
                         <span>{DIET_LABELS[tag]}</span>
                       </button>
                     );
@@ -165,9 +165,9 @@ export default function MePage() {
               {/* Private Priority Grocery Card */}
               <div className="profile-section-card">
                 <h2 className="profile-section-title">
-                  <span aria-hidden="true">🔒</span>
-                  <span>Fair Access</span>
-                  <span className="privacy-badge">100% Private</span>
+                  <Lock size={20} aria-hidden="true" />
+                  <span>Fair access</span>
+                  <span className="privacy-badge">Private</span>
                 </h2>
 
                 <div className="privacy-toggle-card">
@@ -187,10 +187,10 @@ export default function MePage() {
                   </div>
 
                   <p className="privacy-toggle-copy">
-                    This setting is <strong>strictly private</strong> to your device and is{' '}
-                    <strong>never shown</strong> to club officers, event hosts, on tickets, or to any other student.
+                    This setting is <strong>stored privately</strong> and is <strong>never shown</strong> to club
+                    officers, event hosts, on tickets, or to any other student.
                   </p>
-                  <p className="privacy-toggle-copy" style={{ margin: 0 }}>
+                  <p className="privacy-toggle-copy">
                     When leftover food has high demand during the fair draw window, this privately gives your entry
                     double weight in the lottery selection. You can toggle this on or off at any time.
                   </p>
@@ -198,7 +198,7 @@ export default function MePage() {
               </div>
 
               {error && (
-                <div style={{ color: 'var(--red)', fontSize: '0.88rem', fontWeight: 600 }}>
+                <div className="claim-error" role="alert">
                   {error}
                 </div>
               )}
@@ -207,16 +207,15 @@ export default function MePage() {
                 type="submit"
                 className="btn-primary"
                 disabled={saving || !displayName.trim()}
-                style={{ minHeight: 48 }}
               >
-                {saving ? 'Saving...' : 'Save Preferences'}
+                {saving ? 'Saving…' : 'Save preferences'}
               </button>
             </form>
           )}
 
           {toastMessage && (
             <div className="toast-notice" role="status" aria-live="polite">
-              <span aria-hidden="true">✓</span>
+              <Check size={18} aria-hidden="true" />
               <span>{toastMessage}</span>
             </div>
           )}

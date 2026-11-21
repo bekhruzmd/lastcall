@@ -11,7 +11,6 @@ export default function AboutPage() {
       </header>
 
       <section className="about__hero">
-        <p className="about__eyebrow">A campus-wide solution to a campus-size gap</p>
         <h1>Good food should not become trash.</h1>
         <p className="about__lede">
           Club events leave food behind while many USF students need reliable meal options.
@@ -19,12 +18,9 @@ export default function AboutPage() {
       </section>
 
       <section className="about__problem" aria-labelledby="problem-title">
-        <div className="about__stat">
-          <strong>40%</strong>
-          <span>of USF students experience food insecurity</span>
-        </div>
         <div className="about__problem-copy">
           <h2 id="problem-title">The food exists. The timing misses.</h2>
+          <p className="about__stat"><strong>40%</strong> of USF students experience food insecurity.</p>
           <p>
             The <strong>Feed-A-Bull pantry is open Monday–Friday, 10 AM–4 PM</strong>.
             Club meetings and events often finish outside those hours, when nutritious food
@@ -34,30 +30,25 @@ export default function AboutPage() {
       </section>
 
       <section className="about__how" aria-labelledby="how-title">
-        <p className="about__eyebrow">How it works</p>
         <h2 id="how-title">From leftover to a pickup in three steps.</h2>
-        <div className="about__steps">
-          <article>
-            <span>1</span>
+        <ol className="about__steps">
+          <li>
             <h3>Post it</h3>
             <p>A club officer shares what is left, the building, portions, and how long it lasts.</p>
-          </article>
-          <article>
-            <span>2</span>
+          </li>
+          <li>
             <h3>Join the draw</h3>
             <p>Students enter a 45-second lottery, or the 20-second demo window.</p>
-          </article>
-          <article>
-            <span>3</span>
+          </li>
+          <li>
             <h3>Pick it up</h3>
             <p>A signed QR ticket takes the student to the pickup point without a stampede.</p>
-          </article>
-        </div>
+          </li>
+        </ol>
       </section>
 
       <section className="about__fair" aria-labelledby="fair-title">
         <div>
-          <p className="about__eyebrow">Fair by design</p>
           <h2 id="fair-title">Fast hands should not decide who eats.</h2>
         </div>
         <div className="about__fair-copy">

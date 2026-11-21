@@ -1,3 +1,4 @@
+import { ArrowRight, Check, Clock, Hourglass, MapPin, Plus, Shuffle, Utensils } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../shared/api';
@@ -350,7 +351,7 @@ export default function FeedPage() {
               onChange={(e) => handleSelectBuilding(e.target.value)}
               aria-label="Filter by campus building"
             >
-              <option value="ALL">All USF Buildings</option>
+              <option value="ALL">All buildings</option>
               {BUILDINGS.map((b) => (
                 <option key={b} value={b}>
                   {b}
@@ -361,11 +362,9 @@ export default function FeedPage() {
 
           <div className="filter-row">
             <div className="filter-label">
-              <span>Dietary Needs</span>
+              <span>Dietary needs</span>
               {selectedDietTags.length > 0 && (
-                <span style={{ fontSize: '0.75rem', color: 'var(--green)', fontWeight: 600 }}>
-                  {selectedDietTags.length} selected
-                </span>
+                <span className="num">{selectedDietTags.length} selected</span>
               )}
             </div>
             <div className="filter-chips" role="group" aria-label="Dietary filter options">
@@ -379,7 +378,7 @@ export default function FeedPage() {
                     onClick={() => handleToggleDietTag(tag)}
                     aria-pressed={active}
                   >
-                    <span>{active ? '✓' : '+'}</span>
+                    {active ? <Check size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
                     <span>{DIET_LABELS[tag]}</span>
                   </button>
                 );
@@ -392,7 +391,7 @@ export default function FeedPage() {
         <section className="feed-list" aria-label="Available campus food posts">
           <div className="feed-header-row">
             <h1 className="feed-title">
-              <span>Live Food Feed</span>
+              <span>Leftovers now</span>
               <span className="feed-count-badge">
                 {filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'}
               </span>
@@ -400,13 +399,13 @@ export default function FeedPage() {
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px 16px', color: '#666' }}>
-              Checking for leftover food nearby...
+            <div className="feed-loading" role="status">
+              Checking for leftover food nearby…
             </div>
           ) : filteredPosts.length === 0 ? (
             <div className="empty-feed">
               <span className="empty-icon" aria-hidden="true">
-                🥘
+                <Utensils size={24} />
               </span>
               <h2 className="empty-title">No food right now — we'll ping you</h2>
               <p className="empty-desc">
@@ -414,7 +413,7 @@ export default function FeedPage() {
                 Keep this tab open with sound on to catch the next chime!
               </p>
               {(selectedBuilding !== 'ALL' || selectedDietTags.length > 0) && (
-                <button type="button" className="btn-primary" onClick={handleResetFilters} style={{ minHeight: 44 }}>
+                <button type="button" className="btn-primary" onClick={handleResetFilters}>
                   Clear filters to see all posts
                 </button>
               )}
@@ -448,12 +447,10 @@ export default function FeedPage() {
                   ) : post.status === 'closed' || post.portions_left === 0 ? (
                     <div className="post-card-banner open">
                       <span>All claimed</span>
-                      <span>{expiryCount.text} left</span>
                     </div>
                   ) : (
                     <div className="post-card-banner open">
-                      <span>⚡ Open pickup · First-come first-served</span>
-                      <span>{expiryCount.text} left</span>
+                      <span>Open now · first come, first served</span>
                     </div>
                   )}
 
@@ -469,7 +466,7 @@ export default function FeedPage() {
 
                     <div className="post-location">
                       <span className="location-icon" aria-hidden="true">
-                        📍
+                        <MapPin size={16} />
                       </span>
                       <span>
                         {post.building} · Room {post.room}
@@ -482,7 +479,7 @@ export default function FeedPage() {
                         {post.portions_total} portions left
                       </div>
                       <div className="expiry-countdown" title="Food expires at this time">
-                        <span aria-hidden="true">⏱️</span>
+                        <Clock size={15} aria-hidden="true" />
                         <span>{expiryCount.text}</span>
                       </div>
                     </div>
@@ -509,7 +506,9 @@ export default function FeedPage() {
                             className="claim-btn won"
                             aria-label={`You won a portion of ${post.title}. Tap to view ticket.`}
                           >
-                            <span>🎉 You got it! View ticket →</span>
+                            <span>
+                              You got it — view ticket <ArrowRight size={18} aria-hidden="true" />
+                            </span>
                           </Link>
                           <span className="claim-status-info won">
                             Ready to collect at {post.building} Room {post.room}
@@ -518,7 +517,9 @@ export default function FeedPage() {
                       ) : userClaim.status === 'pending' ? (
                         <>
                           <button type="button" className="claim-btn pending" disabled>
-                            <span>⏳ Entered in draw · {lotteryCount.text} left</span>
+                            <span>
+                              <Hourglass size={17} aria-hidden="true" /> Entered · {lotteryCount.text} left
+                            </span>
                           </button>
                           <span className="claim-status-info">
                             You're in the fair draw pool! Results show instantly when the countdown ends.
@@ -535,7 +536,9 @@ export default function FeedPage() {
                         </>
                       ) : userClaim.status === 'picked_up' ? (
                         <button type="button" className="claim-btn pending" disabled>
-                          <span>Picked up ✓</span>
+                          <span>
+                            <Check size={17} aria-hidden="true" /> Picked up
+                          </span>
                         </button>
                       ) : (
                         <button type="button" className="claim-btn pending" disabled>
@@ -555,7 +558,9 @@ export default function FeedPage() {
                           {isClaiming ? (
                             'Entering...'
                           ) : (
-                            <span>🎲 Enter draw · {lotteryCount.text} left</span>
+                            <span>
+                              <Shuffle size={17} aria-hidden="true" /> Enter draw · {lotteryCount.text} left
+                            </span>
                           )}
                         </button>
                         <span className="claim-status-info">
@@ -574,7 +579,6 @@ export default function FeedPage() {
                         >
                           {isClaiming ? 'Claiming...' : 'Claim a portion'}
                         </button>
-                        <span className="claim-status-info">Instant claim · {post.portions_left} left</span>
                       </>
                     ) : (
                       // None left
@@ -584,7 +588,7 @@ export default function FeedPage() {
                     )}
 
                     {hasError && (
-                      <span style={{ color: 'var(--red)', fontSize: '0.82rem', textAlign: 'center', fontWeight: 600 }}>
+                      <span className="claim-error" role="alert">
                         {claimError.message}
                       </span>
                     )}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { ArrowRight, Bell, BellOff, Ticket, User, Utensils } from 'lucide-react';
 import { isMuted, setMuted, unlockAudio } from './sound';
 import type { Claim } from '../shared/types';
 
@@ -28,7 +29,7 @@ export default function StudentHeader({
       <div className="student-header-top">
         <Link to="/" className="student-brand" aria-label="Leftover Bulls Home">
           <span className="student-brand-icon" aria-hidden="true">
-            🥗
+            <Utensils size={18} strokeWidth={2.25} />
           </span>
           <div className="student-brand-text">
             <span className="student-brand-title">Leftover Bulls</span>
@@ -44,7 +45,7 @@ export default function StudentHeader({
             aria-label={muted ? 'Unmute new post alerts' : 'Mute new post alerts'}
             title={muted ? 'Sound is off (click to unmute)' : 'Sound is on (click to mute)'}
           >
-            {muted ? '🔕' : '🔔'}
+            {muted ? <BellOff size={20} aria-hidden="true" /> : <Bell size={20} aria-hidden="true" />}
           </button>
 
           <Link
@@ -52,7 +53,7 @@ export default function StudentHeader({
             className="user-pill-link"
             aria-label="Profile and dietary settings"
           >
-            <span aria-hidden="true">👤</span>
+            <User size={18} aria-hidden="true" />
             <span>{displayName?.trim() ? displayName.slice(0, 12) : 'Profile'}</span>
           </Link>
         </div>
@@ -74,10 +75,11 @@ export default function StudentHeader({
           aria-label="You have an active food ticket. Click to view."
         >
           <div>
-            <span className="active-ticket-banner-badge">Active Ticket</span>
+            <Ticket size={18} aria-hidden="true" />
+            <span className="active-ticket-banner-badge">Your ticket</span>
             <span>{activePostTitle ?? 'View your food ticket'}</span>
           </div>
-          <span>View →</span>
+          <ArrowRight size={18} aria-hidden="true" />
         </Link>
       )}
     </header>

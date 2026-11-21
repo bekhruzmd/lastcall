@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ArrowUpRight, MapPin, Utensils } from 'lucide-react';
 import { api } from '../shared/api';
 import { cachedFoodEvents, fetchFoodEvents } from '../shared/events';
 import type { FoodEvent } from '../shared/types';
@@ -154,20 +155,24 @@ export default function EventsPage() {
                 <li key={e.id} className="event-card">
                   <div className="event-card-time">
                     {happeningNow(e, now) ? <span className="event-live">Happening now</span> : null}
-                    <span>{timeRange(e)}</span>
+                    <span className="num">{timeRange(e)}</span>
                   </div>
                   <h3>{e.title}</h3>
                   {e.club && <p className="event-club">{e.club}</p>}
                   <p className="event-where">
-                    <span aria-hidden="true">📍</span>{' '}
-                    {e.location ? shortLocation(e.location) : 'Location on BullsConnect'}
+                    <MapPin size={16} aria-hidden="true" />
+                    <span>{e.location ? shortLocation(e.location) : 'Location on BullsConnect'}</span>
                     {campus === 'All' && e.campus ? <span className="event-campus"> · {e.campus}</span> : null}
                   </p>
                   {e.summary && <p className="event-summary">{e.summary}</p>}
                   <div className="event-card-foot">
-                    <span className="event-reason">{e.reason === 'Tagged Food' ? '🍽 Food tagged by organizer' : `🍽 ${e.reason}`}</span>
+                    <span className="event-reason">
+                      <Utensils size={14} aria-hidden="true" />
+                      {e.reason === 'Tagged Food' ? 'Food tagged by organizer' : e.reason}
+                    </span>
                     <a href={e.url} target="_blank" rel="noopener noreferrer" className="event-link">
-                      View event<span className="sr-only"> {e.title} on BullsConnect (opens in new tab)</span> ↗
+                      View event<span className="sr-only"> {e.title} on BullsConnect (opens in new tab)</span>
+                      <ArrowUpRight size={16} aria-hidden="true" />
                     </a>
                   </div>
                 </li>

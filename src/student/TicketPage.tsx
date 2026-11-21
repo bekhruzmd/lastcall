@@ -1,3 +1,4 @@
+import { ArrowLeft, Check, Maximize2, Sun, Ticket, TriangleAlert, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
@@ -193,37 +194,29 @@ export default function TicketPage() {
         <div className="ticket-container">
           <div className="ticket-back-nav">
             <Link to="/" className="ticket-back-btn">
-              <span>← Back to food feed</span>
+              <ArrowLeft size={18} aria-hidden="true" />
+              <span>Food feed</span>
             </Link>
             {isOfflineMode && (
-              <span
-                style={{
-                  fontSize: '0.78rem',
-                  background: '#fef3c7',
-                  color: '#92400e',
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  fontWeight: 600,
-                }}
-              >
-                Offline mode (cached ticket)
+              <span className="ticket-offline-note">
+                <WifiOff size={14} aria-hidden="true" /> Offline · saved ticket
               </span>
             )}
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '60px 16px', color: '#666' }}>
-              Loading your verified ticket...
+            <div className="feed-loading" role="status">
+              Loading your ticket…
             </div>
           ) : error || !claim ? (
             <div className="empty-feed">
               <span className="empty-icon" aria-hidden="true">
-                🎫
+                <Ticket size={24} />
               </span>
-              <h2 className="empty-title">Ticket Not Available</h2>
+              <h2 className="empty-title">Ticket not available</h2>
               <p className="empty-desc">{error || 'This ticket could not be found.'}</p>
-              <Link to="/" className="btn-primary" style={{ textDecoration: 'none' }}>
-                Go to Feed
+              <Link to="/" className="btn-primary">
+                Back to the feed
               </Link>
             </div>
           ) : (
@@ -245,23 +238,11 @@ export default function TicketPage() {
                         alt={`QR code for ticket verification: ${claim.ticket_code || 'Claim'}`}
                       />
                     ) : (
-                      <div
-                        style={{
-                          width: 210,
-                          height: 210,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: '#f3f4f6',
-                          color: '#666',
-                        }}
-                      >
-                        Generating QR...
-                      </div>
+                      <div className="ticket-qr-placeholder">Generating QR…</div>
                     )}
                   </div>
 
-                  <span className="ticket-code-label">Verification Code</span>
+                  <span className="ticket-code-label">Pickup code</span>
                   <div className="ticket-code-display" aria-label={`Code: ${claim.ticket_code}`}>
                     {claim.ticket_code ?? '------'}
                   </div>
@@ -269,18 +250,9 @@ export default function TicketPage() {
                   <button
                     type="button"
                     onClick={() => setIsFullscreenQr(true)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--green)',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      padding: '6px 12px',
-                      textDecoration: 'underline',
-                    }}
+                    className="ticket-enlarge-btn"
                   >
-                    🔍 Enlarge QR for scanning
+                    <Maximize2 size={16} aria-hidden="true" /> Enlarge QR for scanning
                   </button>
                 </div>
 
@@ -302,11 +274,8 @@ export default function TicketPage() {
                     </div>
 
                     <div className="ticket-info-card">
-                      <span className="ticket-info-title">Valid Until</span>
-                      <span
-                        className="ticket-info-value"
-                        style={{ color: countdown.isExpired ? 'var(--red)' : 'var(--ink)' }}
-                      >
+                      <span className="ticket-info-title">Valid for</span>
+                      <span className={`ticket-info-value${countdown.isExpired ? ' expired' : ''}`}>
                         {countdown.text}
                       </span>
                     </div>
@@ -315,31 +284,33 @@ export default function TicketPage() {
                   {/* Status Bar */}
                   {claim.status === 'picked_up' ? (
                     <div className="ticket-status-bar picked_up">
-                      <span>✓ Food Picked Up</span>
+                      <Check size={18} aria-hidden="true" />
+                      <span>Picked up</span>
                       {claim.picked_up_at && (
-                        <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+                        <span className="num">
                           · {new Date(claim.picked_up_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
                     </div>
                   ) : countdown.isExpired || claim.status === 'expired' ? (
                     <div className="ticket-status-bar expired">
-                      <span>⚠️ Ticket Expired</span>
+                      <TriangleAlert size={18} aria-hidden="true" />
+                      <span>Ticket expired</span>
                     </div>
                   ) : (
                     <div className="ticket-status-bar won">
-                      <span>Ready for Pickup · Show this screen to host</span>
+                      <span>Ready for pickup · show this screen to the host</span>
                     </div>
                   )}
 
                   {/* Brightness Tip */}
                   <div className="ticket-brightness-tip">
-                    <span style={{ fontSize: '1.2rem' }} aria-hidden="true">
-                      ☀️
+                    <span aria-hidden="true">
+                      <Sun size={18} />
                     </span>
                     <div>
-                      <strong>Full brightness recommended:</strong> Turn your screen brightness all the
-                      way up so the organizer's scanner can read your QR instantly. Works fully offline once loaded.
+                      Turn your screen brightness all the way up so the host's scanner reads your QR instantly.
+                      This ticket works offline once loaded.
                     </div>
                   </div>
                 </div>
@@ -354,41 +325,24 @@ export default function TicketPage() {
                   aria-label="Enlarged QR code for pickup scanning"
                 >
                   <div className="fullscreen-qr-card">
-                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>
+                    <h2 className="fullscreen-qr-title">
                       {post?.title || 'Leftover Bulls Ticket'}
                     </h2>
                     <img
                       src={qrDataUrl}
                       alt="Full screen QR code"
-                      style={{
-                        width: 'min(75vw, 320px)',
-                        height: 'min(75vw, 320px)',
-                        border: '3px solid #000000',
-                        padding: 12,
-                        background: '#ffffff',
-                        borderRadius: 16,
-                      }}
+                      className="fullscreen-qr-img"
                     />
-                    <div
-                      style={{
-                        fontFamily: 'monospace',
-                        fontSize: '2rem',
-                        fontWeight: 900,
-                        letterSpacing: '0.25em',
-                      }}
-                    >
-                      {claim.ticket_code ? claim.ticket_code.split('').join(' ') : ''}
-                    </div>
-                    <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                    <div className="ticket-code-display">{claim.ticket_code ?? ''}</div>
+                    <span className="fullscreen-qr-where">
                       {post?.building} · Room {post?.room}
                     </span>
                     <button
                       type="button"
                       className="btn-primary"
                       onClick={() => setIsFullscreenQr(false)}
-                      style={{ marginTop: 12, minWidth: 160 }}
                     >
-                      Close Fullscreen
+                      Close
                     </button>
                   </div>
                 </div>

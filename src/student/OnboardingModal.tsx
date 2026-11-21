@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Utensils } from 'lucide-react';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export default function OnboardingModal({ isOpen, onSave }: OnboardingModalProps
       <div className="modal-card">
         <div className="modal-header">
           <div className="modal-icon" aria-hidden="true">
-            🤘
+            <Utensils size={22} strokeWidth={2.25} />
           </div>
           <h2 id="welcome-title" className="modal-title">
             Welcome to Leftover Bulls!
@@ -70,11 +71,11 @@ export default function OnboardingModal({ isOpen, onSave }: OnboardingModalProps
               required
             />
             <span className="form-helper">First name only. No password or email needed.</span>
-            {error && <span style={{ color: 'var(--red)', fontSize: '0.8rem', fontWeight: 600 }}>{error}</span>}
+            {error && <span className="claim-error" role="alert">{error}</span>}
           </div>
 
           <button type="submit" className="btn-primary" disabled={saving || !name.trim()}>
-            {saving ? 'Setting up...' : 'Start Rescuing Food 🥗'}
+            {saving ? 'Setting up…' : 'Start rescuing food'}
           </button>
         </form>
       </div>

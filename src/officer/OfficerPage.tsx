@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Check, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
@@ -42,7 +43,7 @@ export default function OfficerPage() {
     claimsRef.current = next;
     setClaims(next);
     // Cache only fields the officer uses; never persist a profile or priority flag.
-    try { localStorage.setItem(`lb.officer.claims.${postId}`, JSON.stringify(next.map(c => ({ ...c, device_id: '', ticket_sig: null, qr: undefined })))); } catch { /* Offline cache is optional. */ }
+    try { localStorage.setItem(`lb.officer.claims.${postId}`, JSON.stringify(next.map(c => ({ ...c, device_id: '', ticket_code: null, ticket_sig: null, qr: undefined })))); } catch { /* Offline cache is optional. */ }
   }, [postId]);
 
   const refresh = useCallback(async () => {
@@ -133,7 +134,7 @@ export default function OfficerPage() {
       accepted.current.add(verified.claimId);
       if (claim) saveClaims([...claimsRef.current.filter(c => c.id !== claim.id), { ...claim, status: 'picked_up' }]);
       setCamera(false);
-      setResult({ ok: true, title: `✓ ${name} — ticket ${verified.code}`, detail });
+      setResult({ ok: true, title: `${name} — ticket ${verified.code}`, detail });
     } catch (e) {
       setCamera(false);
       setResult({ ok: false, title: message(e), detail: 'No pickup recorded. Check the student’s ticket and try again.' });
@@ -162,20 +163,24 @@ export default function OfficerPage() {
     event.preventDefault();
     if (busy || scanLock.current) return;
     scanLock.current = true;
+    setCamera(false);
     setBusy(true);
     try {
       // Codes are checked on the server, so the manual fallback needs a connection.
       if (!navigator.onLine) throw new Error('Codes need a connection. Scan the QR instead — it works offline.');
+      if (!post || Date.now() >= Date.parse(post.expires_at)) throw new Error('Ticket expired');
       const typed = code.trim().toUpperCase();
       const claim = await api.findClaimByCode(postId, typed);
       if (!claim) throw new Error('Invalid code for this post');
-      if (claim.status === 'picked_up' || readQueue().some(p => p.claimId === claim.id)) throw new Error('Already picked up');
+      if (claim.post_id !== postId) throw new Error('Wrong post — this ticket is for other leftovers');
+      if (claim.status === 'picked_up' || accepted.current.has(claim.id) || readQueue().some(p => p.claimId === claim.id)) throw new Error('Already picked up');
       if (claim.status !== 'won') throw new Error(claim.status === 'expired' ? 'Ticket expired' : 'Invalid ticket');
+      if (Date.now() >= Date.parse(post.expires_at)) throw new Error('Ticket expired');
       await api.markPickedUp(claim.id);
       accepted.current.add(claim.id);
       saveClaims([...claimsRef.current.filter(c => c.id !== claim.id), { ...claim, status: 'picked_up' }]);
       setCode('');
-      setResult({ ok: true, title: `✓ ${claim.display_name} — ticket ${typed}`, detail: 'Pickup recorded. Thank you!' });
+      setResult({ ok: true, title: `${claim.display_name} — ticket ${typed}`, detail: 'Pickup recorded. Thank you!' });
     } catch (e) { setResult({ ok: false, title: message(e), detail: 'No pickup recorded. Try scanning the QR instead.' }); }
     finally { setBusy(false); }
   }
@@ -187,7 +192,7 @@ export default function OfficerPage() {
     finally { setClosing(false); }
   }
 
-  if (result) return <main className={`officer-result ${result.ok ? 'officer-result-good' : 'officer-result-bad'}`}><div role="status"><h1>{result.title}</h1><p>{result.detail}</p><button autoFocus onClick={() => { setResult(null); setCode(''); scanLock.current = false; }}>Check next ticket</button></div></main>;
+  if (result) return <main className={`officer-result ${result.ok ? 'officer-result-good' : 'officer-result-bad'}`}><div role="status"><span className="officer-result-icon" aria-hidden="true">{result.ok ? <Check size={44} strokeWidth={2.5} /> : <X size={44} strokeWidth={2.5} />}</span><h1><span className="sr-only">{result.ok ? 'Valid: ' : 'Rejected: '}</span>{result.title}</h1><p>{result.detail}</p><button autoFocus onClick={() => { setResult(null); setCode(''); scanLock.current = false; }}>Check next ticket</button></div></main>;
   if (!loaded) return <main className="officer-page"><p role="status">Opening your post…</p></main>;
   if (!post) return <main className="officer-page"><h1>{error ? 'Could not load your post' : 'Post not found'}</h1>{error && <p role="alert">{error}</p>}<button onClick={() => void refresh().catch(e => setError(message(e)))}>Try again</button><p><Link to="/post">Post leftovers</Link></p></main>;
   if (myHash === null) return <main className="officer-page"><p>Loading…</p></main>;

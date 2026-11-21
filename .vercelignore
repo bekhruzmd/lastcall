@@ -12,6 +12,7 @@ dist
 .upskill
 skills-lock.json
 AGENT_PROMPTS.md
+HANDOFF.md
 CONTRACT.md
 SPEC.md
 docs

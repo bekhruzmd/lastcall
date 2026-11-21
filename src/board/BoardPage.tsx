@@ -105,7 +105,7 @@ export default function BoardPage() {
     <main className="board">
       <header className="board__header">
         <div className="board__brand">Leftover <span>Bulls</span></div>
-        <div className="board__live"><i /> LIVE CAMPUS IMPACT</div>
+        <div className="board__live"><i aria-hidden="true" /> Live campus impact</div>
       </header>
 
       <section className="board__grid">
