@@ -5,7 +5,7 @@
 import * as ed from '@noble/ed25519';
 import type { Api } from './api';
 import { lotterySeconds } from './constants';
-import { getDeviceId } from './identity';
+import { getDeviceHash, getDeviceId } from './identity';
 import { drawWinners } from './lottery';
 import { b64urlEncode, buildQr, randomTicketCode, signPayload } from './ticket';
 import type { Claim, ClaimResult, Post, Profile } from './types';
@@ -54,7 +54,7 @@ function seed(): State {
     portions_left: 10,
     diet_tags: [],
     photo_url: null,
-    poster_device_id: 'demo-0',
+    poster_hash: 'demo-officer',
     created_at: iso(now - 5 * 60_000),
     lottery_ends_at: iso(now - 4 * 60_000),
     expires_at: iso(now + 25 * 60_000),
@@ -243,7 +243,7 @@ export const mockApi: Api = {
       portions_left: input.portions_total,
       diet_tags: input.diet_tags,
       photo_url: input.photo_url ?? null,
-      poster_device_id: getDeviceId(),
+      poster_hash: await getDeviceHash(),
       created_at: iso(now),
       lottery_ends_at: iso(now + lotterySeconds() * 1000),
       expires_at: iso(now + input.duration_min * 60_000),

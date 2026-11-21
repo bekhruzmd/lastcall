@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import QrScanner from 'qr-scanner';
 import { api, verifyScannedTicket } from '../shared/api';
-import { getDeviceId } from '../shared/identity';
+import { getDeviceHash } from '../shared/identity';
 import type { Claim, Post } from '../shared/types';
 import { queuePickup, readQueue, syncPickups } from './pickupQueue';
 import './officer.css';
@@ -17,6 +17,8 @@ type Result = { ok: boolean; title: string; detail: string };
 export default function OfficerPage() {
   const { postId = '' } = useParams();
   const [post, setPost] = useState<Post | null>(null);
+  const [myHash, setMyHash] = useState<string | null>(null);
+  useEffect(() => { void getDeviceHash().then(setMyHash); }, []);
   const [claims, setClaims] = useState<Claim[]>([]);
   const claimsRef = useRef<Claim[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -188,7 +190,8 @@ export default function OfficerPage() {
   if (result) return <main className={`officer-result ${result.ok ? 'officer-result-good' : 'officer-result-bad'}`}><div role="status"><h1>{result.title}</h1><p>{result.detail}</p><button autoFocus onClick={() => { setResult(null); setCode(''); scanLock.current = false; }}>Check next ticket</button></div></main>;
   if (!loaded) return <main className="officer-page"><p role="status">Opening your post…</p></main>;
   if (!post) return <main className="officer-page"><h1>{error ? 'Could not load your post' : 'Post not found'}</h1>{error && <p role="alert">{error}</p>}<button onClick={() => void refresh().catch(e => setError(message(e)))}>Try again</button><p><Link to="/post">Post leftovers</Link></p></main>;
-  if (post.poster_device_id !== getDeviceId()) return <main className="officer-page"><h1>Officer access</h1><p>Open this page on the device that posted these leftovers.</p><Link to="/">Back to the feed</Link></main>;
+  if (myHash === null) return <main className="officer-page"><p>Loading…</p></main>;
+  if (post.poster_hash !== myHash) return <main className="officer-page"><h1>Officer access</h1><p>Open this page on the device that posted these leftovers.</p><Link to="/">Back to the feed</Link></main>;
   const seconds = Math.max(0, Math.ceil((Date.parse(post.lottery_ends_at) - now) / 1000));
   const expired = now >= Date.parse(post.expires_at);
   return <main className="officer-page">

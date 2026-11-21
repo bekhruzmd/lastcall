@@ -31,7 +31,8 @@ export interface Post {
   portions_left: number;
   diet_tags: DietTag[];
   photo_url: string | null;
-  poster_device_id: string;
+  /** SHA-256 of the posting device's id (the raw id is never public). */
+  poster_hash: string;
   created_at: string;
   lottery_ends_at: string;
   expires_at: string;

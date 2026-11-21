@@ -5,7 +5,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Api } from './api';
 import { lotterySeconds } from './constants';
-import { getDeviceId } from './identity';
+import { getDeviceHash, getDeviceId } from './identity';
 import { buildQr } from './ticket';
 import type { Claim, ClaimResult, ImpactStats, Post, Profile } from './types';
 
@@ -21,13 +21,17 @@ function fail(error: { message: string } | null): asserts error is null {
   if (error) throw new Error(error.message);
 }
 
-const CLAIM_COLUMNS = 'id, post_id, device_id, display_name, status, created_at, picked_up_at';
+const POST_COLUMNS =
+  'id, org_name, title, building, room, portions_total, portions_left, diet_tags, photo_url, poster_hash, created_at, lottery_ends_at, expires_at, status';
+
+// device_id is never readable from the public table; device_hash stands in for it.
+const CLAIM_COLUMNS = 'id, post_id, device_hash, display_name, status, created_at, picked_up_at';
 
 function toClaim(row: Record<string, unknown>): Claim {
   return {
     id: row.id as string,
     post_id: row.post_id as string,
-    device_id: row.device_id as string,
+    device_id: (row.device_id as string | undefined) ?? '',
     display_name: row.display_name as string,
     status: row.status as Claim['status'],
     created_at: row.created_at as string,
@@ -144,11 +148,13 @@ export const supabaseApi: Api = {
       p_photo_url: input.photo_url ?? null,
     });
     fail(error);
-    return data as Post;
+    const { poster_device_id: _hidden, ...post } = data as Post & { poster_device_id?: string };
+    void _hidden;
+    return post as Post;
   },
 
   async getPost(postId) {
-    const { data, error } = await db().from('posts').select('*').eq('id', postId).maybeSingle();
+    const { data, error } = await db().from('posts').select(POST_COLUMNS).eq('id', postId).maybeSingle();
     fail(error);
     return (data as Post | null) ?? null;
   },
@@ -157,7 +163,7 @@ export const supabaseApi: Api = {
     await db().rpc('expire_due_posts');
     const { data, error } = await db()
       .from('posts')
-      .select('*')
+      .select(POST_COLUMNS)
       .in('status', ['lottery', 'open'])
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
@@ -185,7 +191,7 @@ export const supabaseApi: Api = {
       .from('claims')
       .select('id')
       .eq('post_id', postId)
-      .eq('device_id', getDeviceId())
+      .eq('device_hash', await getDeviceHash())
       .maybeSingle();
     fail(error);
     return data ? loadOwnClaim(data.id as string) : null;
@@ -264,19 +270,26 @@ export const supabaseApi: Api = {
   },
 
   subscribeMyClaims(onChange) {
-    const me = getDeviceId();
-    const ch = db()
-      .channel('my-claims-' + crypto.randomUUID())
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'claims', filter: `device_id=eq.${me}` },
-        async (p) => {
-          if (!p.new || !('id' in p.new)) return;
-          const full = await loadOwnClaim(p.new.id as string);
-          onChange(full ?? toClaim(p.new));
-        },
-      )
-      .subscribe();
-    return () => void db().removeChannel(ch);
+    let ch: ReturnType<SupabaseClient['channel']> | null = null;
+    let stopped = false;
+    void getDeviceHash().then((hash) => {
+      if (stopped) return;
+      ch = db()
+        .channel('my-claims-' + crypto.randomUUID())
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'claims', filter: `device_hash=eq.${hash}` },
+          async (p) => {
+            if (!p.new || !('id' in p.new)) return;
+            const full = await loadOwnClaim(p.new.id as string);
+            onChange(full ?? toClaim(p.new));
+          },
+        )
+        .subscribe();
+    });
+    return () => {
+      stopped = true;
+      if (ch) void db().removeChannel(ch);
+    };
   },
 };

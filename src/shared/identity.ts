@@ -16,3 +16,10 @@ export function getDeviceId(): string {
     return memoryId;
   }
 }
+
+/** SHA-256 hex of the device id — the only form of it the public claims table exposes. */
+export async function getDeviceHash(): Promise<string> {
+  const bytes = new TextEncoder().encode(getDeviceId());
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
