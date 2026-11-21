@@ -53,7 +53,7 @@ export default function OnboardingModal({ isOpen, onSave, onDismiss }: Onboardin
             <Utensils size={22} strokeWidth={2.25} />
           </div>
           <h2 id="welcome-title" className="modal-title">
-            Welcome to Leftover Bulls!
+            Welcome to lastcall!
           </h2>
           <p className="modal-subtitle">
             USF student events often have great leftover food when meetings wrap up.

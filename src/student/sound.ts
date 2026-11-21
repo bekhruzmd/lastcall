@@ -1,4 +1,4 @@
-// Audio notification utility for Leftover Bulls student feed.
+// Audio notification utility for lastcall student feed.
 // Uses Web Audio API so it requires zero external audio assets and works fully offline.
 
 const MUTE_KEY = 'lb.muted';

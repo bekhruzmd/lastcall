@@ -49,12 +49,12 @@ export default function StudentFooter() {
       <div className="student-footer-privacy">
         <ShieldCheck size={16} aria-hidden="true" />
         <p className="student-footer-note">
-          Leftover Bulls never asks for passwords, student IDs, or USF emails. Priority draw settings are stored privately and never displayed on public screens.
+          lastcall never asks for passwords, student IDs, or USF emails. Priority draw settings are stored privately and never displayed on public screens.
         </p>
       </div>
 
       <div className="student-footer-copy">
-        Leftover Bulls · Built for the USF campus community
+        lastcall · Built for the USF campus community
       </div>
     </footer>
   );

@@ -1,4 +1,4 @@
-# Leftover Bulls
+# lastcall
 
 ## Inspiration
 
@@ -7,11 +7,11 @@ is only open Monday–Friday from 10 AM–4 PM. At the same time, evening and we
 club events can leave perfectly good catered food uneaten.
 
 We wanted to close that timing gap without turning it into a race or a charity
-posting in a GroupMe. Leftover Bulls makes sharing local, immediate, and fair.
+posting in a GroupMe. lastcall makes sharing local, immediate, and fair.
 
 ## What it does
 
-Leftover Bulls lets a club officer post leftover food in seconds. Students see
+lastcall lets a club officer post leftover food in seconds. Students see
 active posts nearby, enter a short lottery, and receive a signed QR ticket if they
 win. After the lottery closes, remaining portions are claimed first come, first
 served with an atomic server-side portion count.
