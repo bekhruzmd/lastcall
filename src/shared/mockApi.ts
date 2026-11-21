@@ -332,7 +332,7 @@ export const mockApi: Api = {
     state = load();
     return state.claims
       .filter((c) => c.post_id === postId)
-      .map((c) => ({ ...c, ticket_sig: null }));
+      .map((c) => ({ ...c, ticket_code: null, ticket_sig: null }));
   },
 
   async markPickedUp(claimId) {
@@ -385,7 +385,7 @@ export const mockApi: Api = {
 
   subscribeClaimsForPost(postId, onChange) {
     const l: Listener = (kind, row) =>
-      kind === 'claim' && (row as Claim).post_id === postId && onChange({ ...(row as Claim), ticket_sig: null });
+      kind === 'claim' && (row as Claim).post_id === postId && onChange({ ...(row as Claim), ticket_code: null, ticket_sig: null });
     listeners.add(l);
     return () => listeners.delete(l);
   },
