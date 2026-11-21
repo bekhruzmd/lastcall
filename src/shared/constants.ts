@@ -65,3 +65,15 @@ export const TICKET_PUBLIC_KEY: string = import.meta.env.VITE_TICKET_PUBLIC_KEY 
 
 /** Set VITE_USE_MOCK=1 to run the UI against in-memory mock data (no Supabase). */
 export const USE_MOCK: boolean = import.meta.env.VITE_USE_MOCK === '1';
+
+/** Estimated value of one rescued meal in US dollars, used for "money saved" figures. */
+export const MEAL_VALUE_USD = 8;
+
+/** Whole-dollar amount for a number of rescued meals, e.g. 1600 for 200 meals. */
+export function mealsToUsd(meals: number): number {
+  return Math.round(meals * MEAL_VALUE_USD);
+}
+
+export function formatUsd(amount: number): string {
+  return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+}

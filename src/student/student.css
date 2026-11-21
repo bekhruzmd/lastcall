@@ -2254,7 +2254,13 @@
 
 @media (min-width: 560px) {
   .leaderboard-stats-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 960px) {
+  .leaderboard-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -2460,6 +2466,18 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--green-deep);
+}
+
+.club-money {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--gold-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-icon.money {
+  background: var(--gold-tint);
+  color: var(--gold-ink);
 }
 
 .club-rank-score {

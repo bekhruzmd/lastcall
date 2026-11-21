@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Award, Flame, Leaf, Share2, ShieldCheck, Trophy, Utensils } from 'lucide-react';
+import { Award, Flame, Leaf, PiggyBank, Share2, ShieldCheck, Trophy, Utensils } from 'lucide-react';
 import { api } from '../shared/api';
+import { MEAL_VALUE_USD, formatUsd, mealsToUsd } from '../shared/constants';
 import type { LeaderboardData } from '../shared/types';
 import StudentHeader from './StudentHeader';
 import StudentFooter from './StudentFooter';
@@ -34,12 +35,14 @@ export default function LeaderboardPage() {
     };
   }, []);
 
+  const totalUsdSaved = mealsToUsd(data.totalMeals);
+
   const handleShare = () => {
     if (navigator.share) {
       navigator
         .share({
           title: 'USF Food Sustainability Leaderboard · LastCall',
-          text: `USF student organizations have prevented ${data.totalLbsSaved} lbs of food waste! Check out the leaderboard:`,
+          text: `USF student organizations have prevented ${data.totalLbsSaved} lbs of food waste and saved students about ${formatUsd(totalUsdSaved)}! Check out the leaderboard:`,
           url: window.location.href,
         })
         .catch(() => {});
@@ -93,6 +96,16 @@ export default function LeaderboardPage() {
           </div>
 
           <div className="stat-card">
+            <span className="stat-icon money" aria-hidden="true">
+              <PiggyBank size={22} />
+            </span>
+            <div className="stat-details">
+              <span className="stat-num">{loading ? '…' : formatUsd(totalUsdSaved)}</span>
+              <span className="stat-label">Money Saved (~{formatUsd(MEAL_VALUE_USD)}/meal)</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
             <span className="stat-icon" aria-hidden="true">
               <Trophy size={22} />
             </span>
@@ -136,6 +149,9 @@ export default function LeaderboardPage() {
                       <strong className="club-name">{club.name}</strong>
                       <span className="club-lbs">
                         {club.lbsPrevented} lbs food waste diverted
+                      </span>
+                      <span className="club-money">
+                        {formatUsd(mealsToUsd(club.mealsRescued))} saved for students
                       </span>
                     </div>
                   </div>
