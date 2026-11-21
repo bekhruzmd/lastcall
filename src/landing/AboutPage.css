@@ -23,15 +23,29 @@
 .about__action:hover { background: var(--green-deep); }
 .about__hero { max-width: 1180px; margin: auto; padding: 72px 24px 80px; }
 .about__hero h1 {
-  max-width: 1000px; margin: 0; font-size: clamp(2.75rem, 6.5vw, 6rem);
-  font-weight: 800; line-height: 1.02; letter-spacing: -.035em;
+  max-width: 1000px;
+  margin: 0;
+  font-size: clamp(2.1rem, 5.5vw, 4.4rem);
+  font-weight: 850;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
 }
-.about__lede { max-width: 700px; margin: 24px 0 0; font-size: clamp(1.125rem, 2vw, 1.5rem); color: var(--ink-2); }
+.about__lede {
+  max-width: 700px;
+  margin: 20px 0 0;
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  color: var(--ink-2);
+  line-height: 1.5;
+}
 .about__problem { max-width: 1180px; margin: auto; padding: 0 24px; }
-.about__problem-copy { border-top: 1px solid var(--line-strong); padding-top: 40px; }
+.about__problem-copy { border-top: 1px solid var(--line-strong); padding-top: 36px; }
 .about__problem-copy h2, .about__how h2, .about__fair h2 {
-  max-width: 780px; margin: 0; font-size: clamp(1.75rem, 3.5vw, 2.75rem);
-  font-weight: 750; line-height: 1.15; letter-spacing: -.025em;
+  max-width: 780px;
+  margin: 0;
+  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
 }
 .about__problem-copy p { max-width: 70ch; margin: 20px 0 0; font-size: 1.125rem; line-height: 1.65; color: var(--ink-2); }
 .about__problem-copy .about__stat { font-size: clamp(1.25rem, 2.4vw, 1.75rem); color: var(--ink); }

@@ -145,7 +145,7 @@ applied. They create test rows; do not point them at the production seed databas
 ## Release checks
 
 See `RELEASE_CHECKLIST.md` for the checks that require a working browser and real
-phones. The production URL is `https://leftover-bulls.vercel.app`.
+phones. The production URL is `https://lastcall-usf.vercel.app` (also accessible at `https://leftover-bulls.vercel.app`).
 
 Deploy with the already-linked Vercel CLI when authorized:
 

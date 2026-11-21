@@ -4,11 +4,13 @@ import {
   Check,
   Clock,
   Hourglass,
+  Leaf,
   MapPin,
   Navigation,
   Plus,
   ShieldCheck,
   Shuffle,
+  Users,
   Utensils,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -185,6 +187,18 @@ export default function FeedPage() {
   const [onMyWaySet, setOnMyWaySet] = useState<Set<string>>(loadStoredOnMyWay);
   const [reportedGoneSet, setReportedGoneSet] = useState<Set<string>>(loadStoredReportedGone);
 
+  // Transitions.dev & BeautifulUI toast notifications
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMessage(msg);
+    toastTimerRef.current = setTimeout(() => {
+      setToastMessage(null);
+    }, 3200);
+  }, []);
+
   // New post highlights
   const [newPostIds, setNewPostIds] = useState<Set<string>>(new Set());
   const knownPostIdsRef = useRef<Set<string>>(new Set());
@@ -358,6 +372,7 @@ export default function FeedPage() {
     storeBuilding('ALL');
     setSelectedDietTags([]);
     storeDiet([]);
+    showToast('Filters reset to show all campus rescues');
   };
 
   // Community action handlers
@@ -376,6 +391,8 @@ export default function FeedPage() {
         storeOnMyWay(next);
         return next;
       });
+
+      showToast(nextIsOnTheWay ? "🚀 Other Bulls notified you're heading there!" : "Removed heading status");
 
       // Optimistic count update
       setPosts((prev) =>
@@ -400,7 +417,7 @@ export default function FeedPage() {
         console.error('Failed to toggle on-my-way status:', err);
       }
     },
-    [onMyWaySet],
+    [onMyWaySet, showToast],
   );
 
   const handleReportGone = useCallback(
@@ -413,6 +430,8 @@ export default function FeedPage() {
         storeReportedGone(next);
         return next;
       });
+
+      showToast("⚠️ Drop reported gone. Thanks for keeping the feed clean!");
 
       // Optimistically increment gone_reports; if >= 2, immediately archive and remove from view
       setPosts((prev) => {
@@ -433,7 +452,7 @@ export default function FeedPage() {
         console.error('Failed to report food gone:', err);
       }
     },
-    [reportedGoneSet],
+    [reportedGoneSet, showToast],
   );
 
   // Filtered Posts: auto-expire (now > expires_at), archived, or gone_reports >= 2
@@ -475,6 +494,11 @@ export default function FeedPage() {
     const post = posts.find((p) => p.id === activeWinningClaim.post_id);
     return post ? `${post.org_name}: ${post.title}` : 'Pick up your food';
   }, [activeWinningClaim, posts]);
+
+  // Aggregate live campus foot traffic for radar banner
+  const totalBullsHeading = useMemo(() => {
+    return filteredPosts.reduce((acc, p) => acc + (p.on_the_way_count ?? 0), 0);
+  }, [filteredPosts]);
 
   // Handle Claim Action
   const handleClaim = useCallback(
@@ -519,347 +543,428 @@ export default function FeedPage() {
       />
 
       <main id="main-content" className="student-content">
-        {/* Filters Section */}
-        <section className="filter-section" aria-label="Filter food listings">
-          <div className="filter-row">
-            <div className="filter-label">
-              <span>Building</span>
-              {(selectedBuilding !== 'ALL' || selectedDietTags.length > 0) && (
-                <button type="button" className="filter-reset-btn" onClick={handleResetFilters}>
-                  Reset filters
-                </button>
-              )}
-            </div>
-            <select
-              className="filter-select"
-              value={selectedBuilding}
-              onChange={(e) => handleSelectBuilding(e.target.value)}
-              aria-label="Filter by campus building"
-            >
-              <option value="ALL">All buildings</option>
-              {BUILDINGS.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-row">
-            <div className="filter-label">
-              <span>Dietary needs</span>
-              {selectedDietTags.length > 0 && (
-                <span className="num">{selectedDietTags.length} selected</span>
-              )}
-            </div>
-            <div className="filter-chips" role="group" aria-label="Dietary filter options">
-              <button
-                type="button"
-                className={`filter-chip ${selectedDietTags.length === 0 ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedDietTags([]);
-                  storeDiet([]);
-                }}
-                aria-pressed={selectedDietTags.length === 0}
-              >
-                {selectedDietTags.length === 0 && <Check size={16} aria-hidden="true" />}
-                <span>All</span>
-              </button>
-              {FEATURED_DIET_FILTERS.map(({ id, label }) => {
-                const active = selectedDietTags.includes(id);
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`filter-chip ${active ? 'active' : ''}`}
-                    onClick={() => handleToggleDietTag(id)}
-                    aria-pressed={active}
-                  >
-                    {active ? <Check size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
-                    <span>{label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* Live Feed List */}
-        <section className="feed-list" aria-label="Available campus food posts">
-          <div className="feed-header-row">
-            <h1 className="feed-title">
-              <span>Active rescues</span>
-              <span className="feed-count-badge">
-                {filteredPosts.length} {filteredPosts.length === 1 ? 'drop' : 'drops'}
-              </span>
-            </h1>
-          </div>
-
-          {loading ? (
-            <div className="feed-loading" role="status">
-              Checking for leftover food nearby…
-            </div>
-          ) : filteredPosts.length === 0 ? (
-            <div className="empty-feed">
-              <span className="empty-icon" aria-hidden="true">
-                <Utensils size={24} />
-              </span>
-              <h2 className="empty-title">No leftover food to rescue right now</h2>
-              <p className="empty-desc">
-                When USF clubs finish meetings and events with extra food, listings pop up here in real time.
-                Keep this tab open with sound on to catch the next chime!
-              </p>
-              {(selectedBuilding !== 'ALL' || selectedDietTags.length > 0) ? (
-                <button type="button" className="btn-primary" onClick={handleResetFilters}>
-                  Clear filters to see all rescues
-                </button>
-              ) : (
-                <Link to="/events" className="btn-primary">
-                  View food at upcoming events
-                </Link>
-              )}
-            </div>
-          ) : (
-            filteredPosts.map((post) => {
-              const isNew = newPostIds.has(post.id);
-              const userClaim = myClaims[post.id];
-              const isClaiming = claimingPostId === post.id;
-              const hasError = claimError?.postId === post.id;
-
-              const isLottery = post.status === 'lottery';
-              const lotteryCount = formatCountdown(post.lottery_ends_at, nowMs);
-              const freshness = getFreshnessData(post.created_at, post.expires_at, nowMs);
-              const isOnMyWay = onMyWaySet.has(post.id);
-              const hasReportedGone = reportedGoneSet.has(post.id);
-              const servingsLeft = post.estimated_servings ?? post.portions_left ?? post.portions_total;
-              const bullsHeading = post.on_the_way_count ?? 0;
-
-              return (
-                <article
-                  key={post.id}
-                  className={`post-card ${isNew ? 'new-arrival' : ''}`}
-                  aria-labelledby={`post-title-${post.id}`}
-                >
-                  {/* Status Banner */}
-                  {isLottery ? (
-                    <div className="post-card-banner lottery">
-                      <span className="lottery-live-indicator">
-                        <span className="live-dot" aria-hidden="true" />
-                        Fair-share draw · zero food waste
-                      </span>
-                      <span>{lotteryCount.text} left</span>
-                    </div>
-                  ) : post.status === 'closed' || post.portions_left === 0 ? (
-                    <div className="post-card-banner open">
-                      <span>All rescued</span>
-                    </div>
-                  ) : (
-                    <div className="post-card-banner open">
-                      <span>Open now · first come, first served</span>
-                    </div>
+        <div className="student-feed-layout">
+          {/* Left Column / Sidebar on Desktop */}
+          <aside className="feed-sidebar" aria-label="Filters and campus radar">
+            {/* Filters Section */}
+            <section className="filter-section" aria-label="Filter food listings">
+              <div className="filter-row">
+                <div className="filter-label">
+                  <span>Building</span>
+                  {(selectedBuilding !== 'ALL' || selectedDietTags.length > 0) && (
+                    <button type="button" className="filter-reset-btn" onClick={handleResetFilters}>
+                      Reset filters
+                    </button>
                   )}
+                </div>
+                <select
+                  className="filter-select"
+                  value={selectedBuilding}
+                  onChange={(e) => handleSelectBuilding(e.target.value)}
+                  aria-label="Filter by campus building"
+                >
+                  <option value="ALL">All buildings</option>
+                  {BUILDINGS.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                  <div className="post-card-body">
-                    <div className="post-card-meta">
-                      <span className="post-org-name">{post.org_name}</span>
-                      <span className="food-trust-badge" title="Catered / commercially sealed food within the 2-hour safety window">
-                        <ShieldCheck size={13} aria-hidden="true" />
-                        <span>Catered / Sealed · 2-Hr Safety Window</span>
-                      </span>
-                    </div>
-
-                    <h2 id={`post-title-${post.id}`} className="post-title">
-                      {post.title}
-                    </h2>
-
-                    <div className="post-location">
-                      <span className="location-icon" aria-hidden="true">
-                        <MapPin size={16} />
-                      </span>
-                      <span>
-                        {post.building} · Room {post.room}
-                      </span>
-                    </div>
-
-                    {/* Live Portion & Foot-Traffic Counter: "~10 servings left · 3 Bulls heading there" */}
-                    <div className="post-portions-row">
-                      <div className="portions-left-text">
-                        <span className="portions-live-counter">
-                          ~{servingsLeft} servings left · {bullsHeading} {bullsHeading === 1 ? 'Bull' : 'Bulls'} heading there
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Live Freshness Countdown Bar */}
-                    <div
-                      className="freshness-bar-container"
-                      aria-label={`Food safety freshness: ${freshness.timeText}`}
-                    >
-                      <div className="freshness-bar-meta">
-                        <span className="freshness-bar-label">
-                          <Clock size={13} aria-hidden="true" /> Freshness window
-                        </span>
-                        <span className={`freshness-bar-time ${freshness.statusColorClass}`}>
-                          {freshness.timeText}
-                        </span>
-                      </div>
-                      <div
-                        className="freshness-progress-track"
-                        role="progressbar"
-                        aria-valuenow={freshness.percent}
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-label="Freshness countdown"
-                      >
-                        <div
-                          className={`freshness-progress-fill ${freshness.statusColorClass}`}
-                          style={{ width: `${freshness.percent}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* 1-Tap Community Action Row: "On My Way" and "It's Gone" */}
-                    <div className="community-action-row" role="group" aria-label="Portion foot traffic and drop status">
+              <div className="filter-row">
+                <div className="filter-label">
+                  <span>Dietary needs</span>
+                  {selectedDietTags.length > 0 && (
+                    <span className="num">{selectedDietTags.length} selected</span>
+                  )}
+                </div>
+                <div className="filter-chips" role="group" aria-label="Dietary filter options">
+                  <button
+                    type="button"
+                    className={`filter-chip ${selectedDietTags.length === 0 ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedDietTags([]);
+                      storeDiet([]);
+                    }}
+                    aria-pressed={selectedDietTags.length === 0}
+                  >
+                    {selectedDietTags.length === 0 && <Check size={16} aria-hidden="true" />}
+                    <span>All</span>
+                  </button>
+                  {FEATURED_DIET_FILTERS.map(({ id, label }) => {
+                    const active = selectedDietTags.includes(id);
+                    return (
                       <button
+                        key={id}
                         type="button"
-                        className={`btn-community btn-on-my-way ${isOnMyWay ? 'active' : ''}`}
-                        onClick={() => handleToggleOnMyWay(post.id)}
-                        aria-pressed={isOnMyWay}
-                        title={isOnMyWay ? "Cancel 'On My Way'" : "Let other Bulls know you're heading there"}
+                        className={`filter-chip ${active ? 'active' : ''}`}
+                        onClick={() => handleToggleDietTag(id)}
+                        aria-pressed={active}
                       >
-                        <Navigation size={15} aria-hidden="true" />
-                        <span>{isOnMyWay ? 'Heading there' : 'On My Way'}</span>
+                        {active ? <Check size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+                        <span>{label}</span>
                       </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
 
-                      <button
-                        type="button"
-                        className={`btn-community btn-its-gone ${hasReportedGone ? 'reported' : ''}`}
-                        onClick={() => handleReportGone(post.id)}
-                        disabled={hasReportedGone}
-                        title={hasReportedGone ? 'You reported this food is gone' : 'Report that all food is gone'}
+            {/* Desktop Campus Sustainability Radar Card (beautifului.dev style) */}
+            <div className="desktop-sidebar-widget" aria-label="Zero-waste campus radar">
+              <div className="desktop-widget-badge">
+                <Leaf size={14} aria-hidden="true" />
+                <span>Zero-Waste USF</span>
+              </div>
+              <h3 className="desktop-widget-title">Campus Food Rescue</h3>
+              <p className="desktop-widget-desc">
+                Connecting USF student organization meetings with leftover catered meals to nearby Bulls in real time.
+              </p>
+              <div className="desktop-widget-stat-grid">
+                <div className="desktop-stat-card">
+                  <span className="desktop-stat-val">2 Hours</span>
+                  <span className="desktop-stat-sub">Safety window</span>
+                </div>
+                <div className="desktop-stat-card">
+                  <span className="desktop-stat-val">~1.2 lbs</span>
+                  <span className="desktop-stat-sub">Diverted / meal</span>
+                </div>
+              </div>
+              <Link to="/leaderboard" className="desktop-widget-cta">
+                View Org Leaderboard →
+              </Link>
+            </div>
+          </aside>
+
+          {/* Right Column / Main Feed */}
+          <div className="feed-main-content">
+            {/* Clean, Unified Campus Radar Header */}
+            <header className="feed-clean-header" aria-label="Campus food rescue status">
+              <div className="feed-clean-header-top">
+                <div className="feed-clean-badge">
+                  <span className="live-radar-dot" aria-hidden="true" />
+                  <span>USF Food Rescue Radar</span>
+                </div>
+                <div className="feed-clean-pills">
+                  <span className="feed-stat-pill">
+                    <strong>{filteredPosts.length}</strong> live {filteredPosts.length === 1 ? 'drop' : 'drops'}
+                  </span>
+                  {totalBullsHeading > 0 && (
+                    <span className="feed-stat-pill secondary">
+                      <Users size={12} aria-hidden="true" />
+                      <strong>{totalBullsHeading}</strong> Bulls heading
+                    </span>
+                  )}
+                </div>
+              </div>
+              <h1 className="feed-clean-title">Rescues Available Now</h1>
+              <p className="feed-clean-subtitle">
+                Catered meeting food saved from going to waste. 2-hour food safety window.
+              </p>
+            </header>
+
+            {/* Live Feed List */}
+            <section className="feed-list" aria-label="Available campus food posts">
+
+              {loading ? (
+                <div className="feed-loading" role="status">
+                  Checking for leftover food nearby…
+                </div>
+              ) : filteredPosts.length === 0 ? (
+                <div className="empty-feed">
+                  <span className="empty-icon" aria-hidden="true">
+                    <Utensils size={24} />
+                  </span>
+                  <h2 className="empty-title">No leftover food to rescue right now</h2>
+                  <p className="empty-desc">
+                    When USF clubs finish meetings and events with extra food, listings pop up here in real time.
+                    Keep this tab open with sound on to catch the next chime!
+                  </p>
+                  {(selectedBuilding !== 'ALL' || selectedDietTags.length > 0) ? (
+                    <button type="button" className="btn-primary" onClick={handleResetFilters}>
+                      Clear filters to see all rescues
+                    </button>
+                  ) : (
+                    <Link to="/events" className="btn-primary">
+                      View food at upcoming events
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <div className="feed-cards-grid">
+                  {filteredPosts.map((post) => {
+                    const isNew = newPostIds.has(post.id);
+                    const userClaim = myClaims[post.id];
+                    const isClaiming = claimingPostId === post.id;
+                    const hasError = claimError?.postId === post.id;
+
+                    const isLottery = post.status === 'lottery';
+                    const lotteryCount = formatCountdown(post.lottery_ends_at, nowMs);
+                    const freshness = getFreshnessData(post.created_at, post.expires_at, nowMs);
+                    const isOnMyWay = onMyWaySet.has(post.id);
+                    const hasReportedGone = reportedGoneSet.has(post.id);
+                    const servingsLeft = post.estimated_servings ?? post.portions_left ?? post.portions_total;
+                    const bullsHeading = post.on_the_way_count ?? 0;
+
+                    return (
+                      <article
+                        key={post.id}
+                        className={`post-card ${isNew ? 'new-arrival' : ''} ${isLottery ? 'in-lottery' : ''}`}
+                        aria-labelledby={`post-title-${post.id}`}
                       >
-                        <AlertCircle size={15} aria-hidden="true" />
-                        <span>{hasReportedGone ? 'Reported gone' : "It's Gone"}</span>
-                      </button>
-                    </div>
-
-                    {post.diet_tags && post.diet_tags.length > 0 && (
-                      <div className="diet-tags-row" aria-label="Dietary certifications">
-                        {post.diet_tags.map((tag) => (
-                          <span key={tag} className={`diet-tag-pill ${tag}`}>
-                            {DIET_LABELS[tag] || tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Claim Button / Claim Status */}
-                  <div className="post-action-area">
-                    {userClaim ? (
-                      // User already has a claim
-                      userClaim.status === 'won' ? (
-                        <>
-                          <Link
-                            to={`/ticket/${userClaim.id}`}
-                            className="claim-btn won"
-                            aria-label={`You won a portion of ${post.title}. Tap to view ticket.`}
-                          >
-                            <span>
-                              You got it — view ticket <ArrowRight size={18} aria-hidden="true" />
+                        {/* Status Banner */}
+                        {isLottery ? (
+                          <div className="post-card-banner lottery">
+                            <span className="lottery-live-indicator">
+                              <span className="live-dot" aria-hidden="true" />
+                              Fair-share draw · zero food waste
                             </span>
-                          </Link>
-                          <span className="claim-status-info won">
-                            Ready to collect at {post.building} Room {post.room}
-                          </span>
-                        </>
-                      ) : userClaim.status === 'pending' ? (
-                        <>
-                          <button type="button" className="claim-btn pending" disabled>
-                            <span>
-                              <Hourglass size={17} aria-hidden="true" /> Entered · {lotteryCount.text} left
+                            <span>{lotteryCount.text} left</span>
+                          </div>
+                        ) : post.status === 'closed' || post.portions_left === 0 ? (
+                          <div className="post-card-banner open">
+                            <span>All rescued</span>
+                          </div>
+                        ) : (
+                          <div className="post-card-banner open">
+                            <span>Open now · first come, first served</span>
+                          </div>
+                        )}
+
+                        {/* Media Section: Image or Geometric Pattern Banner */}
+                        {post.photo_url ? (
+                          <div className="card-media-wrap">
+                            <img
+                              src={post.photo_url}
+                              alt={post.title}
+                              className="card-media-img"
+                              loading="lazy"
+                            />
+                            <div className="card-media-scrim" />
+                            <div className="card-media-badge-top">
+                              <span className={`card-freshness-chip ${freshness.statusColorClass}`}>
+                                <Clock size={12} aria-hidden="true" /> {freshness.timeText}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="card-media-fallback">
+                            <div className="card-fallback-glow" />
+                            <div className="card-media-badge-top">
+                              <span className={`card-freshness-chip ${freshness.statusColorClass}`}>
+                                <Clock size={12} aria-hidden="true" /> {freshness.timeText}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="post-card-body">
+
+                          <div className="post-card-meta">
+                            <span className="post-org-name">{post.org_name}</span>
+                            <span className="food-trust-badge" title="Catered / commercially sealed food within the 2-hour safety window">
+                              <ShieldCheck size={13} aria-hidden="true" />
+                              <span>Catered / Sealed · 2-Hr Safety Window</span>
                             </span>
-                          </button>
-                          <span className="claim-status-info">
-                            You're in the fair draw pool! Results show instantly when the countdown ends.
-                          </span>
-                        </>
-                      ) : userClaim.status === 'lost' ? (
-                        <>
-                          <button type="button" className="claim-btn pending" disabled>
-                            <span>Not this time</span>
-                          </button>
-                          <span className="claim-status-info lost">
-                            All portions were drawn. Better luck on the next post!
-                          </span>
-                        </>
-                      ) : userClaim.status === 'picked_up' ? (
-                        <button type="button" className="claim-btn pending" disabled>
-                          <span>
-                            <Check size={17} aria-hidden="true" /> Picked up
-                          </span>
-                        </button>
-                      ) : (
-                        <button type="button" className="claim-btn pending" disabled>
-                          <span>Expired</span>
-                        </button>
-                      )
-                    ) : isLottery ? (
-                      // In Lottery phase, user hasn't claimed yet
-                      <>
-                        <button
-                          type="button"
-                          className="claim-btn lottery"
-                          onClick={() => handleClaim(post.id)}
-                          disabled={isClaiming || lotteryCount.remainingSec === 0}
-                          aria-label={`Enter draw for ${post.title}, ${lotteryCount.text} left`}
-                        >
-                          {isClaiming ? (
-                            'Entering...'
+                          </div>
+
+                          <h2 id={`post-title-${post.id}`} className="post-title">
+                            {post.title}
+                          </h2>
+
+                          <div className="post-location">
+                            <span className="location-icon" aria-hidden="true">
+                              <MapPin size={16} />
+                            </span>
+                            <span>
+                              {post.building} · Room {post.room}
+                            </span>
+                          </div>
+
+                          {/* Live Portion Capacity Meter & Foot-Traffic */}
+                          <div className="portions-progress-container" aria-label={`~${servingsLeft} servings left`}>
+                            <div className="portions-progress-meta">
+                              <span className="portions-live-counter">
+                                <strong>~{servingsLeft}</strong> servings left
+                              </span>
+                              <span className="bulls-traffic-counter">
+                                <Users size={12} aria-hidden="true" />
+                                <span>{bullsHeading} {bullsHeading === 1 ? 'Bull' : 'Bulls'} heading</span>
+                              </span>
+                            </div>
+                            <div
+                              className="portions-progress-track"
+                              role="progressbar"
+                              aria-valuenow={servingsLeft}
+                              aria-valuemin={0}
+                              aria-valuemax={Math.max(post.portions_total || 1, servingsLeft)}
+                            >
+                              <div
+                                className="portions-progress-fill"
+                                style={{
+                                  width: `${Math.min(100, Math.max(8, Math.round((servingsLeft / Math.max(post.portions_total || 1, servingsLeft)) * 100)))}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Dietary & Allergen Badges */}
+                          {((post.diet_tags && post.diet_tags.length > 0) || (post.allergens && post.allergens.length > 0)) && (
+                            <div className="diet-tags-row" aria-label="Dietary and allergen details">
+                              {post.diet_tags && post.diet_tags.map((tag) => (
+                                <span key={tag} className={`diet-tag-pill ${tag}`}>
+                                  {DIET_LABELS[tag] || tag}
+                                </span>
+                              ))}
+                              {post.allergens && post.allergens.length > 0 && (
+                                <span className="allergen-pill">
+                                  Contains: {post.allergens.join(', ')}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* 1-Tap Community Action Row: "On My Way" and "It's Gone" */}
+                          <div className="community-action-row" role="group" aria-label="Portion foot traffic and drop status">
+                            <button
+                              type="button"
+                              className={`btn-community btn-on-my-way ${isOnMyWay ? 'active' : ''}`}
+                              onClick={() => handleToggleOnMyWay(post.id)}
+                              aria-pressed={isOnMyWay}
+                              title={isOnMyWay ? "Cancel 'On My Way'" : "Let other Bulls know you're heading there"}
+                            >
+                              <Navigation size={14} aria-hidden="true" />
+                              <span>{isOnMyWay ? 'Heading there' : 'On My Way'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              className={`btn-community btn-its-gone ${hasReportedGone ? 'reported' : ''}`}
+                              onClick={() => handleReportGone(post.id)}
+                              disabled={hasReportedGone}
+                              title={hasReportedGone ? 'You reported this food is gone' : 'Report that all food is gone'}
+                            >
+                              <AlertCircle size={14} aria-hidden="true" />
+                              <span>{hasReportedGone ? 'Reported gone' : "It's Gone"}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Claim Button / Claim Status */}
+                        <div className="post-action-area">
+                          {userClaim ? (
+                            // User already has a claim
+                            userClaim.status === 'won' ? (
+                              <>
+                                <Link
+                                  to={`/ticket/${userClaim.id}`}
+                                  className="claim-btn won"
+                                  aria-label={`You won a portion of ${post.title}. Tap to view ticket.`}
+                                >
+                                  <span>
+                                    You got it — view ticket <ArrowRight size={18} aria-hidden="true" />
+                                  </span>
+                                </Link>
+                                <span className="claim-status-info won">
+                                  Ready to collect at {post.building} Room {post.room}
+                                </span>
+                              </>
+                            ) : userClaim.status === 'pending' ? (
+                              <>
+                                <button type="button" className="claim-btn pending" disabled>
+                                  <span>
+                                    <Hourglass size={17} aria-hidden="true" /> Entered · {lotteryCount.text} left
+                                  </span>
+                                </button>
+                                <span className="claim-status-info">
+                                  You're in the fair draw pool! Results show instantly when the countdown ends.
+                                </span>
+                              </>
+                            ) : userClaim.status === 'lost' ? (
+                              <>
+                                <button type="button" className="claim-btn pending" disabled>
+                                  <span>Not this time</span>
+                                </button>
+                                <span className="claim-status-info lost">
+                                  All portions were drawn. Better luck on the next post!
+                                </span>
+                              </>
+                            ) : userClaim.status === 'picked_up' ? (
+                              <button type="button" className="claim-btn pending" disabled>
+                                <span>
+                                  <Check size={17} aria-hidden="true" /> Picked up
+                                </span>
+                              </button>
+                            ) : (
+                              <button type="button" className="claim-btn pending" disabled>
+                                <span>Expired</span>
+                              </button>
+                            )
+                          ) : isLottery ? (
+                            // In Lottery phase, user hasn't claimed yet
+                            <>
+                              <button
+                                type="button"
+                                className="claim-btn lottery"
+                                onClick={() => handleClaim(post.id)}
+                                disabled={isClaiming || lotteryCount.remainingSec === 0}
+                                aria-label={`Enter draw for ${post.title}, ${lotteryCount.text} left`}
+                              >
+                                {isClaiming ? (
+                                  'Entering...'
+                                ) : (
+                                  <span>
+                                    <Shuffle size={17} aria-hidden="true" /> Enter draw · {lotteryCount.text} left
+                                  </span>
+                                )}
+                              </button>
+                              <span className="claim-status-info">
+                                Fair draw: no rush to be first. Everyone who enters before the timer ends has a chance, and people who got food less recently get a better one.
+                              </span>
+                            </>
+                          ) : post.portions_left > 0 ? (
+                            // In Open phase, portions available
+                            <>
+                              <button
+                                type="button"
+                                className="claim-btn open"
+                                onClick={() => handleClaim(post.id)}
+                                disabled={isClaiming}
+                                aria-label={`Rescue a portion of ${post.title}`}
+                              >
+                                {isClaiming ? 'Rescuing…' : 'Rescue a portion'}
+                              </button>
+                            </>
                           ) : (
-                            <span>
-                              <Shuffle size={17} aria-hidden="true" /> Enter draw · {lotteryCount.text} left
+                            // None left
+                            <button type="button" className="claim-btn pending" disabled>
+                              <span>All rescued</span>
+                            </button>
+                          )}
+
+                          {hasError && (
+                            <span className="claim-error" role="alert">
+                              {claimError.message}
                             </span>
                           )}
-                        </button>
-                        <span className="claim-status-info">
-                          Fair draw: no rush to be first. Everyone who enters before the timer ends has a chance, and people who got food less recently get a better one.
-                        </span>
-                      </>
-                    ) : post.portions_left > 0 ? (
-                      // In Open phase, portions available
-                      <>
-                        <button
-                          type="button"
-                          className="claim-btn open"
-                          onClick={() => handleClaim(post.id)}
-                          disabled={isClaiming}
-                          aria-label={`Rescue a portion of ${post.title}`}
-                        >
-                          {isClaiming ? 'Rescuing…' : 'Rescue a portion'}
-                        </button>
-                      </>
-                    ) : (
-                      // None left
-                      <button type="button" className="claim-btn pending" disabled>
-                        <span>All rescued</span>
-                      </button>
-                    )}
-
-                    {hasError && (
-                      <span className="claim-error" role="alert">
-                        {claimError.message}
-                      </span>
-                    )}
-                  </div>
-                </article>
-              );
-            })
-          )}
-        </section>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
       </main>
 
       <StudentFooter />
+      {toastMessage && (
+        <div className="toast-notice" role="status" aria-live="polite">
+          <span>{toastMessage}</span>
+        </div>
+      )}
       <OnboardingModal
         isOpen={showOnboarding}
         onSave={handleOnboardingSave}

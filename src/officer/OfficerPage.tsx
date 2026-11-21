@@ -1,7 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import {
+  ArrowLeft,
+  BarChart3,
+  Camera,
+  Check,
+  Clock,
+  ExternalLink,
+  MapPin,
+  Monitor,
+  Plus,
+  QrCode,
+  Users,
+  X,
+} from 'lucide-react';
 import QRCode from 'qrcode';
 import QrScanner from 'qr-scanner';
 import { api, verifyScannedTicket } from '../shared/api';
@@ -10,9 +23,22 @@ import type { Claim, Post } from '../shared/types';
 import { queuePickup, readQueue, syncPickups } from './pickupQueue';
 import './officer.css';
 
-const labels: Record<Claim['status'], string> = { pending: 'In the draw', won: 'On the way', lost: 'Not selected', picked_up: 'Picked up', expired: 'Expired' };
-function message(error: unknown) { return error instanceof Error ? error.message : 'Something went wrong. Please try again.'; }
-function connectionFailed(error: unknown) { return !navigator.onLine || /failed to fetch|network|load failed|offline/i.test(message(error)); }
+const labels: Record<Claim['status'], string> = {
+  pending: 'In the draw',
+  won: 'On the way',
+  lost: 'Not selected',
+  picked_up: 'Picked up',
+  expired: 'Expired',
+};
+
+function message(error: unknown) {
+  return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+}
+
+function connectionFailed(error: unknown) {
+  return !navigator.onLine || /failed to fetch|network|load failed|offline/i.test(message(error));
+}
+
 type Result = { ok: boolean; title: string; detail: string };
 
 export default function OfficerPage() {
@@ -48,8 +74,12 @@ export default function OfficerPage() {
   const saveClaims = useCallback((next: Claim[]) => {
     claimsRef.current = next;
     setClaims(next);
-    // Cache only fields the officer uses; never persist a profile or priority flag.
-    try { localStorage.setItem(`lb.officer.claims.${postId}`, JSON.stringify(next.map(c => ({ ...c, device_id: '', ticket_code: null, ticket_sig: null, qr: undefined })))); } catch { /* Offline cache is optional. */ }
+    try {
+      localStorage.setItem(
+        `lb.officer.claims.${postId}`,
+        JSON.stringify(next.map((c) => ({ ...c, device_id: '', ticket_code: null, ticket_sig: null, qr: undefined })))
+      );
+    } catch { /* Offline cache is optional */ }
   }, [postId]);
 
   const refresh = useCallback(async () => {
@@ -77,9 +107,9 @@ export default function OfficerPage() {
       }
     }
     void loadInitial();
-    const stopPosts = api.subscribePosts(p => { if (p.id === postId) setPost(p); });
-    const stopClaims = api.subscribeClaimsForPost(postId, claim => {
-      saveClaims([...claimsRef.current.filter(c => c.id !== claim.id), claim]);
+    const stopPosts = api.subscribePosts((p) => { if (p.id === postId) setPost(p); });
+    const stopClaims = api.subscribeClaimsForPost(postId, (claim) => {
+      saveClaims([...claimsRef.current.filter((c) => c.id !== claim.id), claim]);
     });
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
     async function retry() {
@@ -87,24 +117,38 @@ export default function OfficerPage() {
       await syncPickups();
       if (active) {
         setQueued([...readQueue()]);
-        if (navigator.onLine) void refresh().catch(e => setError(message(e)));
+        if (navigator.onLine) void refresh().catch((e) => setError(message(e)));
       }
     }
     void retry();
     const poll = window.setInterval(() => void retry(), 10000);
     window.addEventListener('online', retry);
     window.addEventListener('offline', retry);
-    return () => { active = false; stopPosts(); stopClaims(); window.clearInterval(tick); window.clearInterval(poll); window.removeEventListener('online', retry); window.removeEventListener('offline', retry); };
+    return () => {
+      active = false;
+      stopPosts();
+      stopClaims();
+      window.clearInterval(tick);
+      window.clearInterval(poll);
+      window.removeEventListener('online', retry);
+      window.removeEventListener('offline', retry);
+    };
   }, [postId, refresh, saveClaims]);
 
   useEffect(() => {
     if (post?.status !== 'lottery' || now < Date.parse(post.lottery_ends_at) || !online) return;
-    void api.resolveLotteryIfDue(postId).then(refresh).catch(e => setError(message(e)));
+    void api.resolveLotteryIfDue(postId).then(refresh).catch((e) => setError(message(e)));
   }, [now, online, post, postId, refresh]);
 
   useEffect(() => {
     let active = true;
-    void QRCode.toDataURL(boardUrl, { width: 220, margin: 2, color: { dark: '#0b5d3b', light: '#ffffff' } }).then(url => { if (active) setBoardQr(url); }).catch(() => {});
+    void QRCode.toDataURL(boardUrl, {
+      width: 260,
+      margin: 1,
+      color: { dark: '#0b5d3b', light: '#ffffff' },
+    }).then((url) => {
+      if (active) setBoardQr(url);
+    }).catch(() => {});
     return () => { active = false; };
   }, [boardUrl]);
 
@@ -114,14 +158,20 @@ export default function OfficerPage() {
     setBusy(true);
     try {
       const verified = await verifyScannedTicket(qr);
-      if (!verified.valid || !verified.claimId || !verified.code) throw new Error(verified.reason === 'expired' ? 'Ticket expired' : 'Invalid ticket');
-      if (verified.postId !== postId) throw new Error('Wrong post — this ticket is for other leftovers');
-      if (accepted.current.has(verified.claimId) || readQueue().some(p => p.claimId === verified.claimId)) throw new Error('Already picked up');
-      let claim = claimsRef.current.find(c => c.id === verified.claimId);
+      if (!verified.valid || !verified.claimId || !verified.code) {
+        throw new Error(verified.reason === 'expired' ? 'Ticket expired' : 'Invalid ticket');
+      }
+      if (verified.postId !== postId) {
+        throw new Error('Wrong post — this ticket is for other leftovers');
+      }
+      if (accepted.current.has(verified.claimId) || readQueue().some((p) => p.claimId === verified.claimId)) {
+        throw new Error('Already picked up');
+      }
+      let claim = claimsRef.current.find((c) => c.id === verified.claimId);
       let offlinePickup = !navigator.onLine;
       if (navigator.onLine) {
         try {
-          const fresh = (await api.listClaimsForPost(postId)).find(c => c.id === verified.claimId);
+          const fresh = (await api.listClaimsForPost(postId)).find((c) => c.id === verified.claimId);
           if (!fresh) throw new Error('Invalid ticket');
           claim = fresh;
         } catch (e) {
@@ -129,7 +179,9 @@ export default function OfficerPage() {
           else throw e;
         }
       }
-      if (claim && (claim.post_id !== postId || (claim.ticket_code !== null && claim.ticket_code !== verified.code))) throw new Error('Invalid ticket');
+      if (claim && (claim.post_id !== postId || (claim.ticket_code !== null && claim.ticket_code !== verified.code))) {
+        throw new Error('Invalid ticket');
+      }
       if (claim?.status === 'picked_up') throw new Error('Already picked up');
       if (claim && claim.status !== 'won') throw new Error(claim.status === 'expired' ? 'Ticket expired' : 'Invalid ticket');
       const name = claim?.display_name || 'Ticket holder';
@@ -145,25 +197,29 @@ export default function OfficerPage() {
       if (offlinePickup) {
         const persisted = queuePickup(pickup);
         setQueued([...readQueue()]);
-        detail = persisted ? 'Verified offline. Pickup saved; it will sync when connected. Offline checks cannot see pickups on other devices.' : 'Verified offline. Keep this page open: storage is unavailable, so the pickup is saved only for this session.';
+        detail = persisted
+          ? 'Verified offline. Pickup saved; it will sync when connected.'
+          : 'Verified offline. Keep this page open: saved for this session.';
       }
       accepted.current.add(verified.claimId);
-      if (claim) saveClaims([...claimsRef.current.filter(c => c.id !== claim.id), { ...claim, status: 'picked_up' }]);
+      if (claim) saveClaims([...claimsRef.current.filter((c) => c.id !== claim.id), { ...claim, status: 'picked_up' }]);
       setCamera(false);
       setResult({ ok: true, title: `${name} — ticket ${verified.code}`, detail });
     } catch (e) {
       setCamera(false);
       setResult({ ok: false, title: message(e), detail: 'No pickup recorded. Check the student’s ticket and try again.' });
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
+
   const scanHandler = useRef(acceptTicket);
   useEffect(() => { scanHandler.current = acceptTicket; });
 
   useEffect(() => {
-    // Load the decoder while connected so starting the scanner offline can work.
-    void QrScanner.createQrEngine().then(engine => {
+    void QrScanner.createQrEngine().then((engine) => {
       if (engine instanceof Worker) engine.terminate();
-    }).catch(() => { /* Camera fallback remains available. */ });
+    }).catch(() => {});
   }, []);
 
   function toggleCamera() {
@@ -183,9 +239,18 @@ export default function OfficerPage() {
   useEffect(() => {
     if (!camera || !video.current || !window.isSecureContext) return;
     let active = true;
-    const scanner = new QrScanner(video.current, scan => void scanHandler.current(scan.data), { preferredCamera: 'environment', returnDetailedScanResult: true, highlightScanRegion: true, maxScansPerSecond: 4 });
-    void scanner.start().catch(() => { if (active) setCameraError('Camera unavailable. Allow camera access, or use the code below.'); });
-    return () => { active = false; scanner.destroy(); };
+    const scanner = new QrScanner(
+      video.current,
+      (scan) => void scanHandler.current(scan.data),
+      { preferredCamera: 'environment', returnDetailedScanResult: true, highlightScanRegion: true, maxScansPerSecond: 4 }
+    );
+    void scanner.start().catch(() => {
+      if (active) setCameraError('Camera unavailable. Allow camera access, or use the code below.');
+    });
+    return () => {
+      active = false;
+      scanner.destroy();
+    };
   }, [camera]);
 
   async function manual(event: FormEvent) {
@@ -195,63 +260,349 @@ export default function OfficerPage() {
     setCamera(false);
     setBusy(true);
     try {
-      // Codes are checked on the server, so the manual fallback needs a connection.
-      if (!navigator.onLine) throw new Error('Codes need a connection. Scan the QR instead — it works offline.');
+      if (!navigator.onLine) throw new Error('Codes need an internet connection. Scan the QR instead.');
       if (!post || Date.now() >= Date.parse(post.expires_at)) throw new Error('Ticket expired');
       const typed = code.trim().toUpperCase();
       const claim = await api.findClaimByCode(postId, typed);
       if (!claim) throw new Error('Invalid code for this post');
       if (claim.post_id !== postId) throw new Error('Wrong post — this ticket is for other leftovers');
-      if (claim.status === 'picked_up' || accepted.current.has(claim.id) || readQueue().some(p => p.claimId === claim.id)) throw new Error('Already picked up');
+      if (claim.status === 'picked_up' || accepted.current.has(claim.id) || readQueue().some((p) => p.claimId === claim.id)) {
+        throw new Error('Already picked up');
+      }
       if (claim.status !== 'won') throw new Error(claim.status === 'expired' ? 'Ticket expired' : 'Invalid ticket');
       if (Date.now() >= Date.parse(post.expires_at)) throw new Error('Ticket expired');
       await api.markPickedUp(claim.id);
       accepted.current.add(claim.id);
-      saveClaims([...claimsRef.current.filter(c => c.id !== claim.id), { ...claim, status: 'picked_up' }]);
+      saveClaims([...claimsRef.current.filter((c) => c.id !== claim.id), { ...claim, status: 'picked_up' }]);
       setCode('');
       setResult({ ok: true, title: `${claim.display_name} — ticket ${typed}`, detail: 'Pickup recorded. Thank you!' });
-    } catch (e) { setResult({ ok: false, title: message(e), detail: 'No pickup recorded. Try scanning the QR instead.' }); }
-    finally { setBusy(false); }
+    } catch (e) {
+      setResult({ ok: false, title: message(e), detail: 'No pickup recorded. Try scanning the QR instead.' });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function close() {
     if (!window.confirm('Close this post to new claims? Existing tickets can still be scanned.')) return;
     setClosing(true);
-    try { await api.closePost(postId); await refresh(); } catch (e) { setError(message(e)); }
-    finally { setClosing(false); }
+    try {
+      await api.closePost(postId);
+      await refresh();
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setClosing(false);
+    }
   }
 
-  if (result) return <main className={`officer-result ${result.ok ? 'officer-result-good' : 'officer-result-bad'}`}><div role="status"><span className="officer-result-icon" aria-hidden="true">{result.ok ? <Check size={44} strokeWidth={2.5} /> : <X size={44} strokeWidth={2.5} />}</span><h1><span className="sr-only">{result.ok ? 'Valid: ' : 'Rejected: '}</span>{result.title}</h1><p>{result.detail}</p><button autoFocus onClick={() => { setResult(null); setCode(''); scanLock.current = false; }}>Check next ticket</button></div></main>;
+  if (result) {
+    return (
+      <main className={`officer-result ${result.ok ? 'officer-result-good' : 'officer-result-bad'}`}>
+        <div role="status">
+          <span className="officer-result-icon" aria-hidden="true">
+            {result.ok ? <Check size={44} strokeWidth={2.5} /> : <X size={44} strokeWidth={2.5} />}
+          </span>
+          <h1>
+            <span className="sr-only">{result.ok ? 'Valid: ' : 'Rejected: '}</span>
+            {result.title}
+          </h1>
+          <p>{result.detail}</p>
+          <button
+            autoFocus
+            onClick={() => {
+              setResult(null);
+              setCode('');
+              scanLock.current = false;
+            }}
+          >
+            Check next ticket
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   if (!loaded) return <main className="officer-page"><p role="status">Opening your post…</p></main>;
-  if (!post) return <main className="officer-page"><h1>{error ? 'Could not load your post' : 'Post not found'}</h1>{error && <p role="alert">{error}</p>}<button onClick={() => void refresh().catch(e => setError(message(e)))}>Try again</button><p><Link to="/post">Post leftovers</Link></p></main>;
+  if (!post) {
+    return (
+      <main className="officer-page">
+        <h1>{error ? 'Could not load your post' : 'Post not found'}</h1>
+        {error && <p role="alert">{error}</p>}
+        <button onClick={() => void refresh().catch((e) => setError(message(e)))}>Try again</button>
+        <p><Link to="/post">Post leftovers</Link></p>
+      </main>
+    );
+  }
+
   if (myHash === null) return <main className="officer-page"><p>Loading…</p></main>;
-  if (post.poster_hash !== myHash) return <main className="officer-page"><h1>Officer access</h1><p>Open this page on the device that posted these leftovers.</p><Link to="/">Back to the feed</Link></main>;
+  if (post.poster_hash !== myHash) {
+    return (
+      <main className="officer-page">
+        <h1>Officer access</h1>
+        <p>Open this page on the device that posted these leftovers.</p>
+        <Link to="/">Back to the feed</Link>
+      </main>
+    );
+  }
+
   const seconds = Math.max(0, Math.ceil((Date.parse(post.lottery_ends_at) - now) / 1000));
   const expired = now >= Date.parse(post.expires_at);
-  return <main id="main-content" className="officer-page">
-    <nav className="officer-nav">
-      <Link to="/">← Food feed</Link>
-      <div className="officer-nav-links">
-        <Link to="/post">New post</Link>
-        <Link to="/board">Impact board</Link>
+
+  return (
+    <main id="main-content" className="officer-page">
+      {/* Navigation */}
+      <nav className="officer-nav">
+        <Link to="/" className="officer-back-link">
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>Food Feed</span>
+        </Link>
+        <div className="officer-nav-links">
+          <Link to="/post" className="officer-nav-pill">
+            <Plus size={15} aria-hidden="true" />
+            <span>New Post</span>
+          </Link>
+          <Link to="/board" className="officer-nav-pill">
+            <BarChart3 size={15} aria-hidden="true" />
+            <span>Impact Board</span>
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero Post Header Card */}
+      <div className="officer-hero-card">
+        <div className="officer-hero-top">
+          <span className="officer-org-badge">{post.org_name}</span>
+          <div className="officer-status-capsule">
+            {post.status === 'lottery' && !expired ? (
+              <span className="status-capsule lottery">
+                <Clock size={13} aria-hidden="true" />
+                <span>Fair Draw · {seconds}s left</span>
+              </span>
+            ) : expired ? (
+              <span className="status-capsule expired">Expired</span>
+            ) : post.status === 'closed' ? (
+              <span className="status-capsule closed">Closed</span>
+            ) : (
+              <span className="status-capsule open">
+                <span className="status-live-dot" aria-hidden="true" />
+                <span>Live · Open for Claims</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        <h1 className="officer-post-title">{post.title}</h1>
+
+        <p className="officer-post-location">
+          <MapPin size={15} aria-hidden="true" />
+          <span>{post.building} · Room {post.room}</span>
+        </p>
       </div>
-    </nav>
-    <h1>{post.title}</h1><p className="officer-intro">{post.org_name} · {post.building} · {post.room}</p>
-    {!online && <p className="officer-notice" role="status">Offline. Signed QR tickets still work on this device.</p>}
-    {queued.length > 0 && <section className="officer-notice" aria-label="Saved offline pickups">
-      <p role="status">{queued.length} pickup{queued.length === 1 ? '' : 's'} saved on this device, not yet synced.</p>
-      {queued.some(pickup => pickup.issue) && <ul>{queued.filter(pickup => pickup.issue).map(pickup => <li key={pickup.claimId}>{pickup.name} — ticket {pickup.code}: {pickup.issue}</li>)}</ul>}
-      <button onClick={() => void syncPickups().then(() => setQueued([...readQueue()]))}>Retry sync</button>
-    </section>}
-    {error && <p className="officer-error" role="alert">{error}</p>}
-    <section className="officer-summary" aria-label="Post status"><div><strong>{post.portions_left}</strong><span>portions unclaimed</span></div><div><strong>{post.status === 'lottery' && !expired ? `${seconds}s` : expired ? 'Expired' : post.status === 'closed' ? 'Closed' : 'Open'}</strong><span>{post.status === 'lottery' && !expired ? 'until the fair-share draw' : 'for new claims'}</span></div></section>
-    <section className="officer-section"><h2>Check a ticket</h2><button className="officer-primary" disabled={busy} onClick={toggleCamera}>{camera ? 'Stop camera' : 'Scan ticket QR'}</button>
-      {camera && <div className="officer-camera"><video ref={video} muted playsInline aria-label="Ticket scanner camera" /><p>Hold the student’s QR inside the frame.</p></div>}
-      {cameraError && <p role="alert" className="officer-error">{cameraError}</p>}
-      <form className="officer-code" onSubmit={manual}><label>Or enter the 6-character code<input aria-label="6-character ticket code" autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={6} pattern="[A-HJ-NP-Z2-9]{6}" placeholder="K7P2QX" value={code} onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ''))} required /></label><button disabled={busy || code.length !== 6}>{busy ? 'Checking…' : 'Check code'}</button></form>
-    </section>
-    <section className="officer-section"><h2>Claimants <span className="officer-muted">({claims.length})</span></h2>{claims.length === 0 ? <p>No claims yet. Your post is live on the feed.</p> : <ul className="officer-claims">{claims.map(claim => <li key={claim.id}><span>{claim.display_name}</span><span className={`officer-status officer-status-${claim.status}`}>{labels[claim.status]}</span></li>)}</ul>}</section>
-    <section className="officer-section officer-board"><div><h2>Put the impact on screen</h2><p>Open the campus board on a shared screen.</p><a href={boardUrl} target="_blank" rel="noreferrer">Open impact board</a><p className="officer-board-url">{boardUrl}</p></div>{boardQr && <img src={boardQr} width={180} height={180} alt="QR code linking to the campus impact board" />}</section>
-    <button className="officer-close" disabled={closing || post.status === 'closed' || expired} onClick={() => void close()}>{closing ? 'Closing…' : post.status === 'closed' || expired ? 'Post closed' : 'Close early'}</button>
-  </main>;
+
+      {!online && (
+        <p className="officer-notice" role="status">
+          Offline. Signed QR tickets still work on this device.
+        </p>
+      )}
+
+      {queued.length > 0 && (
+        <section className="officer-notice" aria-label="Saved offline pickups">
+          <p role="status">
+            {queued.length} pickup{queued.length === 1 ? '' : 's'} saved on this device, not yet synced.
+          </p>
+          {queued.some((pickup) => pickup.issue) && (
+            <ul>
+              {queued.filter((pickup) => pickup.issue).map((pickup) => (
+                <li key={pickup.claimId}>
+                  {pickup.name} — ticket {pickup.code}: {pickup.issue}
+                </li>
+              ))}
+            </ul>
+          )}
+          <button onClick={() => void syncPickups().then(() => setQueued([...readQueue()]))}>
+            Retry sync
+          </button>
+        </section>
+      )}
+
+      {error && <p className="officer-error-box" role="alert">{error}</p>}
+
+      {/* Status Summary Bento Grid */}
+      <div className="officer-stats-grid" aria-label="Post status summary">
+        <div className="officer-stat-card primary">
+          <span className="stat-card-label">Remaining Portions</span>
+          <div className="stat-card-val-row">
+            <strong className="stat-card-number">{post.portions_left}</strong>
+            <span className="stat-card-unit">unclaimed</span>
+          </div>
+          <div className="stat-progress-track">
+            <div
+              className="stat-progress-fill"
+              style={{
+                width: `${Math.min(100, Math.max(8, Math.round((post.portions_left / Math.max(post.portions_total || 1, post.portions_left)) * 100)))}%`,
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="officer-stat-card secondary">
+          <span className="stat-card-label">Claim Window</span>
+          <div className="stat-card-val-row">
+            <strong className="stat-card-status">
+              {post.status === 'lottery' && !expired ? `${seconds}s` : expired ? 'Expired' : post.status === 'closed' ? 'Closed' : 'Open'}
+            </strong>
+            <span className="stat-card-unit">
+              {post.status === 'lottery' && !expired ? 'until draw resolves' : 'accepting pickups'}
+            </span>
+          </div>
+          <span className="stat-card-hint">
+            {post.status === 'lottery' ? 'Fair-share weighted lottery' : 'First-come, first-served pickup'}
+          </span>
+        </div>
+      </div>
+
+      {/* Ticket Verification Card */}
+      <section className="officer-panel-card">
+        <div className="panel-card-header">
+          <div className="panel-header-icon">
+            <QrCode size={20} aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="panel-card-title">Check Student Ticket</h2>
+            <p className="panel-card-sub">Scan the QR code on a student’s phone or enter their 6-character pickup code.</p>
+          </div>
+        </div>
+
+        <div className="scanner-actions">
+          <button
+            type="button"
+            className={`officer-scan-btn ${camera ? 'active' : ''}`}
+            disabled={busy}
+            onClick={toggleCamera}
+          >
+            <Camera size={18} aria-hidden="true" />
+            <span>{camera ? 'Stop Camera Scanner' : 'Scan Ticket QR Code'}</span>
+          </button>
+
+          {camera && (
+            <div className="officer-camera-wrap">
+              <video ref={video} muted playsInline aria-label="Ticket scanner camera" />
+              <p className="scanner-hint">Hold the student’s QR inside the camera frame.</p>
+            </div>
+          )}
+
+          {cameraError && <p role="alert" className="officer-error-box">{cameraError}</p>}
+
+          <form className="officer-code-form" onSubmit={manual}>
+            <label className="code-input-label">
+              <span>Or enter the 6-character pickup code</span>
+              <div className="code-input-row">
+                <input
+                  aria-label="6-character ticket code"
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  maxLength={6}
+                  pattern="[A-HJ-NP-Z2-9]{6}"
+                  placeholder="K7P2QX"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z2-9]/g, ''))}
+                  required
+                  className="code-input-box"
+                />
+                <button
+                  type="submit"
+                  className="code-verify-btn"
+                  disabled={busy || code.length !== 6}
+                >
+                  {busy ? 'Checking…' : 'Check Code'}
+                </button>
+              </div>
+            </label>
+          </form>
+        </div>
+      </section>
+
+      {/* Claimants Queue Card */}
+      <section className="officer-panel-card">
+        <div className="panel-card-header">
+          <div className="panel-header-icon">
+            <Users size={20} aria-hidden="true" />
+          </div>
+          <div className="claimants-heading-wrap">
+            <h2 className="panel-card-title">Claimants Queue</h2>
+            <span className="claimants-count-pill">{claims.length}</span>
+          </div>
+        </div>
+
+        {claims.length === 0 ? (
+          <div className="officer-empty-claims">
+            <p className="empty-claims-text">No claims yet. Your post is live on the student feed.</p>
+            <span className="empty-claims-sub">When nearby Bulls reserve portions, their names and tickets will show up here.</span>
+          </div>
+        ) : (
+          <ul className="officer-claims-list">
+            {claims.map((claim) => (
+              <li key={claim.id} className="officer-claim-item">
+                <div className="claim-item-left">
+                  <span className="claim-user-name">{claim.display_name || 'Student'}</span>
+                  <span className="claim-portion-tag">1 portion</span>
+                </div>
+                <span className={`officer-status-badge ${claim.status}`}>
+                  {labels[claim.status]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Broadcast on Screen Card */}
+      <section className="officer-panel-card broadcast-card">
+        <div className="broadcast-content">
+          <div className="panel-card-header">
+            <div className="panel-header-icon">
+              <Monitor size={20} aria-hidden="true" />
+            </div>
+            <div>
+              <h2 className="panel-card-title">Put Impact on Screen</h2>
+              <p className="panel-card-sub">Project live rescue stats on your club meeting screen or TV.</p>
+            </div>
+          </div>
+
+          <a
+            href={boardUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="open-board-btn"
+          >
+            <span>Open Live Impact Board</span>
+            <ExternalLink size={15} aria-hidden="true" />
+          </a>
+
+          <div className="board-url-capsule" title={boardUrl}>
+            <span>{boardUrl}</span>
+          </div>
+        </div>
+
+        {boardQr && (
+          <div className="broadcast-qr-frame">
+            <img src={boardQr} width={130} height={130} alt="QR code linking to the campus impact board" />
+            <span className="broadcast-qr-label">Scan to project</span>
+          </div>
+        )}
+      </section>
+
+      {/* Destructive Action */}
+      <button
+        type="button"
+        className="officer-close-btn"
+        disabled={closing || post.status === 'closed' || expired}
+        onClick={() => void close()}
+      >
+        {closing ? 'Closing post…' : post.status === 'closed' || expired ? 'Post closed' : 'Close early to new claims'}
+      </button>
+    </main>
+  );
 }

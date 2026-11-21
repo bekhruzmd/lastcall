@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
+import { Clock, MapPin, Utensils } from 'lucide-react';
 import { api } from '../shared/api';
 import type { ImpactStats, Post } from '../shared/types';
 import './BoardPage.css';
@@ -106,11 +107,14 @@ export default function BoardPage() {
     <main id="main-content" className="board">
       <header className="board__header">
         <Link to="/" className="board__brand" title="Return to student feed">
-          Leftover <span>Bulls</span>
+          last<span>call</span>
         </Link>
         <div className="board__header-actions">
           <Link to="/about" className="board__header-link">How it works</Link>
-          <div className="board__live"><i aria-hidden="true" /> Live campus impact</div>
+          <div className="board__live">
+            <i aria-hidden="true" />
+            <span className="board__live-text">Live campus impact</span>
+          </div>
         </div>
       </header>
 
@@ -129,7 +133,7 @@ export default function BoardPage() {
         <section className="active-panel" aria-label="Active leftovers">
           <div className="active-panel__heading">
             <h1>Available now</h1>
-            <span>{posts.length} live</span>
+            <span className="active-panel__count">{posts.length} live</span>
           </div>
           <div className="post-list">
             {posts.length === 0 ? (
@@ -139,29 +143,34 @@ export default function BoardPage() {
               </div>
             ) : posts.map((post) => (
               <article className="board-post" key={post.id}>
-                <div className="board-post__main">
+                <div className="board-post__top">
                   <span className="board-post__club">{post.org_name}</span>
-                  <h2>{post.title}</h2>
-                  <p>{post.building} · Room {post.room}</p>
-                </div>
-                <div className="board-post__stats">
-                  <div>
-                    <strong>{post.portions_left}</strong>
-                    <span>portions left</span>
+                  <div className="board-post__badges">
+                    <span className="board-post__portions-capsule">
+                      <Utensils size={13} aria-hidden="true" />
+                      <span><strong>{post.portions_left}</strong> portions left</span>
+                    </span>
+                    {post.status === 'lottery' && (
+                      <span className="board-post__status-badge lottery">
+                        <Clock size={13} aria-hidden="true" />
+                        <span>Draw · {countdown(post.lottery_ends_at)}</span>
+                      </span>
+                    )}
+                    {post.status === 'open' && (
+                      <span className="board-post__status-badge open">
+                        <span className="status-live-dot" aria-hidden="true" />
+                        <span>Open · Claim now</span>
+                      </span>
+                    )}
                   </div>
-                  {post.status === 'lottery' && (
-                    <div className="board-post__lottery">
-                      <strong>{countdown(post.lottery_ends_at)}</strong>
-                      <span>lottery</span>
-                    </div>
-                  )}
-                  {post.status === 'open' && (
-                    <div className="board-post__open">
-                      <strong>Open</strong>
-                      <span>claim now</span>
-                    </div>
-                  )}
                 </div>
+
+                <h2 className="board-post__title">{post.title}</h2>
+
+                <p className="board-post__location">
+                  <MapPin size={14} aria-hidden="true" />
+                  <span>{post.building} · Room {post.room}</span>
+                </p>
               </article>
             ))}
           </div>
