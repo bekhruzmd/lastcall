@@ -430,3 +430,6 @@ enabled = true
 
 [functions.sign-ticket]
 verify_jwt = false
+
+[functions.campus-events]
+verify_jwt = false
