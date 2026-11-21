@@ -473,7 +473,7 @@ export const mockApi: Api = {
     const totalMeals = clubs.reduce((acc, c) => acc + c.mealsRescued, 0);
     const totalLbsSaved = Number((totalMeals * 1.2).toFixed(1));
 
-    return { totalMeals, totalLbsSaved, clubs };
+    return { totalMeals, totalLbsSaved, clubs, includesDemoData: true };
   },
 
   subscribePosts(onChange) {

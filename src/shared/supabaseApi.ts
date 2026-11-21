@@ -273,23 +273,38 @@ export const supabaseApi: Api = {
   },
 
   async getLeaderboard(): Promise<LeaderboardData> {
-    const baseClubs = [
-      { rank: 1, name: 'Society of Hispanic Professional Engineers (SHPE)', mealsRescued: 52, lbsPrevented: 62.4 },
-      { rank: 2, name: 'Muslim Student Association (MSA)', mealsRescued: 38, lbsPrevented: 45.6 },
-      { rank: 3, name: 'Association for Computing Machinery (ACM)', mealsRescued: 31, lbsPrevented: 37.2 },
-      { rank: 4, name: 'IEEE Student Branch', mealsRescued: 24, lbsPrevented: 28.8 },
-      { rank: 5, name: 'Student Government', mealsRescued: 19, lbsPrevented: 22.8 },
-      { rank: 6, name: 'Women in Computer Science (WiCS)', mealsRescued: 16, lbsPrevented: 19.2 },
-    ];
-    let totalMeals = baseClubs.reduce((acc, c) => acc + c.mealsRescued, 0);
+    // Demo baseline so every part of the leaderboard has something to show.
+    // Real scanned pickups are added on top, per club.
+    const demoClubs: Record<string, number> = {
+      'Society of Hispanic Professional Engineers (SHPE)': 52,
+      'Muslim Student Association (MSA)': 38,
+      'Association for Computing Machinery (ACM)': 31,
+      'IEEE Student Branch': 24,
+      'Student Government': 19,
+      'Women in Computer Science (WiCS)': 16,
+    };
+    const clubMap = new Map<string, number>(Object.entries(demoClubs));
     try {
-      const stats = await supabaseApi.getImpactStats();
-      if (stats.mealsRescued > 0) totalMeals += stats.mealsRescued;
-    } catch { /* use base stats */ }
+      const pickups = await supabaseApi.listRecentPickups(1000);
+      for (const p of pickups as { org_name?: string | null }[]) {
+        if (p.org_name) clubMap.set(p.org_name, (clubMap.get(p.org_name) ?? 0) + 1);
+      }
+    } catch { /* demo baseline only */ }
+
+    const clubs = [...clubMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, mealsRescued], i) => ({
+        rank: i + 1,
+        name,
+        mealsRescued,
+        lbsPrevented: Number((mealsRescued * 1.2).toFixed(1)),
+      }));
+    const totalMeals = clubs.reduce((acc, c) => acc + c.mealsRescued, 0);
     return {
       totalMeals,
       totalLbsSaved: Number((totalMeals * 1.2).toFixed(1)),
-      clubs: baseClubs,
+      clubs,
+      includesDemoData: true,
     };
   },
 

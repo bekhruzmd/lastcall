@@ -107,7 +107,7 @@ export default function BoardPage() {
     <main id="main-content" className="board">
       <header className="board__header">
         <Link to="/" className="board__brand" title="Return to student feed">
-          last<span>call</span>
+          Last<span>Call</span>
         </Link>
         <div className="board__header-actions">
           <Link to="/about" className="board__header-link">How it works</Link>

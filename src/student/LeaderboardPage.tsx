@@ -9,9 +9,10 @@ import './student.css';
 
 export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardData>({
-    totalMeals: 200,
-    totalLbsSaved: 240,
+    totalMeals: 0,
+    totalLbsSaved: 0,
     clubs: [],
+    includesDemoData: false,
   });
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -69,7 +70,7 @@ export default function LeaderboardPage() {
           </h1>
           <p className="leaderboard-subtitle">
             Celebrating USF student organizations turning meeting leftovers into rescued meals.
-            Official metrics recognized for Student Government budgeting and Golden Bull Awards.
+            Every count comes from a ticket scanned at pickup.
           </p>
         </section>
 
@@ -120,7 +121,7 @@ export default function LeaderboardPage() {
         <div className="leaderboard-action-row">
           <div className="leaderboard-action-tip">
             <Award size={18} aria-hidden="true" />
-            <span>Official impact verification for SG funding</span>
+            <span>Share your club's impact</span>
           </div>
           <button type="button" className="btn-share-board" onClick={handleShare}>
             <Share2 size={16} aria-hidden="true" />
@@ -134,6 +135,13 @@ export default function LeaderboardPage() {
             <Flame size={20} aria-hidden="true" />
             <span>Top Organizations by Meals Rescued</span>
           </h2>
+
+          {data.includesDemoData && (
+            <p className="leaderboard-sample-note" role="note">
+              <span className="leaderboard-sample-tag">Demo data</span>
+              <span>Includes sample club numbers. Real pickups are added live.</span>
+            </p>
+          )}
 
           <div className="club-ranks-list" role="list">
             {data.clubs.map((club) => {
@@ -170,9 +178,8 @@ export default function LeaderboardPage() {
         <div className="leaderboard-verify-note">
           <ShieldCheck size={18} aria-hidden="true" />
           <p>
-            Metrics are cryptographically tracked via verified ticket pickups.
-            Questions or requesting a certified export for your student organization?
-            Contact the USF Office of Sustainability or Student Government.
+            Meals count when a host scans a student's signed QR ticket at pickup.
+            Food waste uses an estimate of ~1.2 lbs per meal and money saved uses ~{formatUsd(MEAL_VALUE_USD)} per meal.
           </p>
         </div>
       </main>

@@ -95,6 +95,8 @@ export interface LeaderboardData {
   totalMeals: number;
   totalLbsSaved: number;
   clubs: ClubLeaderboardEntry[];
+  /** True when the numbers include a demo baseline on top of real pickups. */
+  includesDemoData: boolean;
 }
 
 export interface VerifyResult {
