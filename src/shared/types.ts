@@ -83,3 +83,18 @@ export interface VerifyResult {
   expiresAt?: number;
   reason?: 'malformed' | 'bad_signature' | 'expired';
 }
+
+/** An upcoming BullsConnect event that will likely have food (from the campus-events function). */
+export interface FoodEvent {
+  id: string;
+  title: string;
+  club: string;
+  start: string;
+  end: string;
+  location: string | null;
+  campus: string | null;
+  url: string;
+  eventId: string | null;
+  reason: string;
+  summary: string;
+}

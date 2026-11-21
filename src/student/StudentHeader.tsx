@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { isMuted, setMuted, unlockAudio } from './sound';
 import type { Claim } from '../shared/types';
 
@@ -57,6 +57,15 @@ export default function StudentHeader({
           </Link>
         </div>
       </div>
+
+      <nav className="student-tabs" aria-label="Student sections">
+        <NavLink to="/" end className={({ isActive }) => `student-tab${isActive ? ' active' : ''}`}>
+          Leftovers now
+        </NavLink>
+        <NavLink to="/events" className={({ isActive }) => `student-tab${isActive ? ' active' : ''}`}>
+          Food at events
+        </NavLink>
+      </nav>
 
       {activeClaim && (
         <Link
