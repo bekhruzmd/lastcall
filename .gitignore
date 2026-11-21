@@ -43,3 +43,12 @@ skills-lock.json
 
 # Vercel
 .vercel
+
+# Local planning, agent handoffs, and presentation notes
+/AGENT_PROMPTS.md
+/CONTRACT.md
+/SPEC.md
+/DEMO_SCRIPT.md
+/docs/AGENT_*.md
+/docs/PITCH.md
+/docs/RELEASE_CHECKLIST.md
