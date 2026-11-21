@@ -81,6 +81,15 @@ export default function BoardPage() {
     };
   }, []);
 
+  // Re-render every second while a draw is running so its countdown ticks smoothly.
+  const [, setTick] = useState(0);
+  const hasLottery = posts.some((post) => post.status === 'lottery');
+  useEffect(() => {
+    if (!hasLottery) return;
+    const timer = window.setInterval(() => setTick((t) => t + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [hasLottery]);
+
   useEffect(() => {
     if (previousMeals.current !== null && stats.mealsRescued > previousMeals.current) {
       setCounterBump(false);
