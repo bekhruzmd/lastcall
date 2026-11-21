@@ -1,6 +1,6 @@
 {
-  "name": "lastcall",
-  "short_name": "lastcall",
+  "name": "LastCall",
+  "short_name": "LastCall",
   "description": "USF Campus Food Rescue — fast, fair, and verified.",
   "start_url": "/",
   "display": "standalone",

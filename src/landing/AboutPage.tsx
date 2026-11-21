@@ -5,8 +5,8 @@ export default function AboutPage() {
   return (
     <main id="main-content" className="about">
       <header className="about__nav">
-        <Link className="about__brand" to="/" aria-label="lastcall home">
-          lastcall
+        <Link className="about__brand" to="/" aria-label="LastCall home">
+          LastCall
         </Link>
         <div className="about__nav-links">
           <Link className="about__nav-link" to="/board">Impact board</Link>
@@ -74,7 +74,7 @@ export default function AboutPage() {
           <h2 id="cta-title">Get involved on campus</h2>
           <p>
             Whether you are a student looking for a good meal or a student organization with leftover catering,
-            lastcall makes campus food recovery fast, fair, and safe.
+            LastCall makes campus food recovery fast, fair, and safe.
           </p>
           <div className="about__cta-actions">
             <Link to="/" className="about__action">Find food now</Link>
@@ -90,7 +90,7 @@ export default function AboutPage() {
             Need ongoing groceries? USF Feed-A-Bull Pantry is located in <strong>MSC 0002</strong>, open Mon–Fri 10 AM – 4 PM.
           </p>
           <p className="about__footer-copy">
-            lastcall · Built for the University of South Florida community
+            LastCall · Built for the University of South Florida community
           </p>
         </div>
       </footer>

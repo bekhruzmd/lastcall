@@ -38,7 +38,7 @@ export default function LeaderboardPage() {
     if (navigator.share) {
       navigator
         .share({
-          title: 'USF Food Sustainability Leaderboard · lastcall',
+          title: 'USF Food Sustainability Leaderboard · LastCall',
           text: `USF student organizations have prevented ${data.totalLbsSaved} lbs of food waste! Check out the leaderboard:`,
           url: window.location.href,
         })

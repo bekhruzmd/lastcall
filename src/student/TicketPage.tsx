@@ -293,7 +293,7 @@ export default function TicketPage() {
                 >
                   <div className="fullscreen-qr-card" onClick={(e) => e.stopPropagation()}>
                     <h2 className="fullscreen-qr-title">
-                      {post?.title || 'lastcall Ticket'}
+                      {post?.title || 'LastCall Ticket'}
                     </h2>
                     <img
                       src={activeQrDataUrl}

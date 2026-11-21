@@ -49,12 +49,12 @@ export default function StudentFooter() {
       <div className="student-footer-privacy">
         <ShieldCheck size={16} aria-hidden="true" />
         <p className="student-footer-note">
-          lastcall never asks for passwords, student IDs, or USF emails. Priority draw settings are stored privately and never displayed on public screens.
+          LastCall never asks for passwords, student IDs, or USF emails. Priority draw settings are stored privately and never displayed on public screens.
         </p>
       </div>
 
       <div className="student-footer-copy">
-        lastcall · Built for the USF campus community
+        LastCall · Built for the USF campus community
       </div>
     </footer>
   );

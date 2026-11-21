@@ -27,12 +27,12 @@ export default function StudentHeader({
   return (
     <header className="student-header">
       <div className="student-header-top">
-        <Link to="/" className="student-brand" aria-label="lastcall Home">
+        <Link to="/" className="student-brand" aria-label="LastCall Home">
           <span className="student-brand-icon" aria-hidden="true">
             <Utensils size={18} strokeWidth={2.25} />
           </span>
           <div className="student-brand-text">
-            <span className="student-brand-title">lastcall</span>
+            <span className="student-brand-title">LastCall</span>
             <span className="student-brand-subtitle">USF Campus Food Rescue</span>
           </div>
         </Link>

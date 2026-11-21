@@ -1,6 +1,6 @@
-# lastcall
+# LastCall
 
-lastcall connects leftover food from campus events with students. Officers
+LastCall connects leftover food from campus events with students. Officers
 post available portions, students join a short draw or claim remaining portions,
 and officers verify signed tickets at pickup.
 
