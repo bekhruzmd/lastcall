@@ -1,8 +1,28 @@
+<p align="center">
+  <img src="../public/icon-192.png" width="96" height="96" alt="LastCall app icon" />
+</p>
+
 # LastCall
 
 LastCall connects leftover food from campus events with students. Officers
 post available portions, students join a short draw or claim remaining portions,
 and officers verify signed tickets at pickup.
+
+Live at [lastcall-usf.vercel.app](https://lastcall-usf.vercel.app).
+
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/feed.jpg" width="260" alt="Student feed showing an open pizza rescue with servings left and dietary tags" />
+  <img src="screenshots/ticket.jpg" width="260" alt="Pickup ticket with a QR code and six-letter pickup code" />
+  <img src="screenshots/events.jpg" width="260" alt="Food at upcoming events page listing BullsConnect events that mention food" />
+</p>
+
+<p align="center"><em>Student feed · Pickup ticket · Food at upcoming events</em></p>
+
+![Impact board for a club meeting screen, showing meals rescued, live posts and a QR code to the student feed](screenshots/board.jpg)
+
+<p align="center"><em>Impact board for club meeting screens</em></p>
 
 ## Run locally
 
