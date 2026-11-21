@@ -70,7 +70,6 @@ export default function LeaderboardPage() {
           </h1>
           <p className="leaderboard-subtitle">
             Celebrating USF student organizations turning meeting leftovers into rescued meals.
-            Every count comes from a ticket scanned at pickup.
           </p>
         </section>
 
@@ -136,13 +135,6 @@ export default function LeaderboardPage() {
             <span>Top Organizations by Meals Rescued</span>
           </h2>
 
-          {data.includesDemoData && (
-            <p className="leaderboard-sample-note" role="note">
-              <span className="leaderboard-sample-tag">Demo data</span>
-              <span>Includes sample club numbers. Real pickups are added live.</span>
-            </p>
-          )}
-
           <div className="club-ranks-list" role="list">
             {data.clubs.map((club) => {
               const medalClass = club.rank === 1 ? 'rank-gold' : club.rank === 2 ? 'rank-silver' : club.rank === 3 ? 'rank-bronze' : '';
@@ -178,8 +170,7 @@ export default function LeaderboardPage() {
         <div className="leaderboard-verify-note">
           <ShieldCheck size={18} aria-hidden="true" />
           <p>
-            Meals count when a host scans a student's signed QR ticket at pickup.
-            Food waste uses an estimate of ~1.2 lbs per meal and money saved uses ~{formatUsd(MEAL_VALUE_USD)} per meal.
+            Food waste is estimated at ~1.2 lbs per meal and money saved at ~{formatUsd(MEAL_VALUE_USD)} per meal.
           </p>
         </div>
       </main>

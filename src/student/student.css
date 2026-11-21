@@ -2883,24 +2883,3 @@
   font-variant-numeric: proportional-nums;
 }
 
-.leaderboard-sample-note {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-size: 0.85rem;
-  color: var(--ink-2);
-}
-
-.leaderboard-sample-tag {
-  padding: 2px 8px;
-  border-radius: var(--r-pill);
-  background: var(--gold-tint);
-  color: var(--gold-ink);
-  font-size: 0.72rem;
-  font-weight: 750;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
