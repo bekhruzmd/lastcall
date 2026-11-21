@@ -2,6 +2,7 @@ import { Component, lazy, Suspense } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import FeedPage from './student/FeedPage';
+import { PageTransition } from './shared/motion';
 
 const TicketPage = lazy(() => import('./student/TicketPage'));
 const MePage = lazy(() => import('./student/MePage'));
@@ -36,6 +37,7 @@ export default function App() {
       </a>
       <PageErrorBoundary>
         <Suspense fallback={<main style={{ padding: 24 }}><p role="status">Loading page…</p></main>}>
+        <PageTransition>
         <Routes>
           <Route path="/" element={<FeedPage />} />
           <Route path="/ticket/:claimId" element={<TicketPage />} />
@@ -48,6 +50,7 @@ export default function App() {
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="*" element={<FeedPage />} />
         </Routes>
+        </PageTransition>
         </Suspense>
       </PageErrorBoundary>
     </BrowserRouter>

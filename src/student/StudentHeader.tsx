@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
+import { IconSwap } from '../shared/motion';
+import { useSlidingPill } from '../shared/useSlidingPill';
 import { ArrowRight, Bell, BellOff, Calendar, Plus, Sparkles, Ticket, Trophy, User, Utensils } from 'lucide-react';
 import { isMuted, setMuted, unlockAudio } from './sound';
 import type { Claim } from '../shared/types';
@@ -16,6 +18,8 @@ export default function StudentHeader({
   activePostTitle,
 }: StudentHeaderProps) {
   const [muted, setMutedState] = useState(() => isMuted());
+  const { pathname } = useLocation();
+  const { navRef, pillRef } = useSlidingPill<HTMLElement>('.student-tab.active', [pathname]);
 
   const handleToggleMute = () => {
     unlockAudio();
@@ -46,7 +50,7 @@ export default function StudentHeader({
               aria-label={muted ? 'Unmute new post alerts' : 'Mute new post alerts'}
               title={muted ? 'Sound is off (click to unmute)' : 'Sound is on (click to mute)'}
             >
-              {muted ? <BellOff size={18} aria-hidden="true" /> : <Bell size={18} aria-hidden="true" />}
+              <IconSwap showSecond={muted} first={<Bell size={18} />} second={<BellOff size={18} />} />
             </button>
 
             <Link
@@ -69,7 +73,8 @@ export default function StudentHeader({
           </div>
         </div>
 
-        <nav className="student-tabs" aria-label="Student sections">
+        <nav ref={navRef} className="student-tabs" aria-label="Student sections">
+          <span ref={pillRef} className="student-tab-pill" aria-hidden="true" />
           <NavLink to="/" end className={({ isActive }) => `student-tab${isActive ? ' active' : ''}`}>
             <Sparkles size={15} aria-hidden="true" />
             <span className="tab-label-desktop">Active rescues</span>

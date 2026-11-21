@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Maximize2, Sun, Ticket, TriangleAlert, WifiOff } from 'lucide-react';
+import { ArrowLeft, Maximize2, Sun, Ticket, TriangleAlert, WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import QRCode from 'qrcode';
@@ -6,6 +6,7 @@ import { api } from '../shared/api';
 import { loadTicketData, saveTicketCache } from './ticketData';
 import type { Claim, Post } from '../shared/types';
 import StudentHeader from './StudentHeader';
+import { SuccessCheck } from '../shared/motion';
 import './student.css';
 
 function formatExpiryCountdown(targetIso?: string | null, nowMs: number = Date.now()): {
@@ -248,7 +249,7 @@ export default function TicketPage() {
                   {/* Status Bar */}
                   {claim.status === 'picked_up' ? (
                     <div className="ticket-status-bar picked_up">
-                      <Check size={18} aria-hidden="true" />
+                      <SuccessCheck size={20} />
                       <span>Picked up</span>
                       {claim.picked_up_at && (
                         <span className="num">
@@ -265,6 +266,7 @@ export default function TicketPage() {
                     <div className="ticket-status-bar" role="status"><span>{ticketMessage}</span></div>
                   ) : (
                     <div className="ticket-status-bar won">
+                      <SuccessCheck size={20} />
                       <span>Ready for pickup · show this screen to the host</span>
                     </div>
                   )}

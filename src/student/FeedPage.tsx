@@ -14,11 +14,13 @@ import {
   Utensils,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../shared/api';
 import { BUILDINGS, DIET_LABELS } from '../shared/constants';
 import type { Claim, DietTag, Post, Profile } from '../shared/types';
 import StudentHeader from './StudentHeader';
+import { IconSwap, NumberChange } from '../shared/motion';
 import StudentFooter from './StudentFooter';
 import OnboardingModal from './OnboardingModal';
 import { playNewPostChime } from './sound';
@@ -188,14 +190,14 @@ export default function FeedPage() {
   const [reportedGoneSet, setReportedGoneSet] = useState<Set<string>>(loadStoredReportedGone);
 
   // Transitions.dev & BeautifulUI toast notifications
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; closing: boolean; id: number } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((msg: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToastMessage(msg);
+    setToast({ message: msg, closing: false, id: Date.now() });
     toastTimerRef.current = setTimeout(() => {
-      setToastMessage(null);
+      setToast((prev) => (prev ? { ...prev, closing: true } : prev));
     }, 3200);
   }, []);
 
@@ -602,7 +604,7 @@ export default function FeedPage() {
                         onClick={() => handleToggleDietTag(id)}
                         aria-pressed={active}
                       >
-                        {active ? <Check size={16} aria-hidden="true" /> : <Plus size={16} aria-hidden="true" />}
+                        <IconSwap showSecond={!active} first={<Check size={16} />} second={<Plus size={16} />} />
                         <span>{label}</span>
                       </button>
                     );
@@ -648,12 +650,12 @@ export default function FeedPage() {
                 </div>
                 <div className="feed-clean-pills">
                   <span className="feed-stat-pill">
-                    <strong>{filteredPosts.length}</strong> live {filteredPosts.length === 1 ? 'drop' : 'drops'}
+                    <strong><NumberChange value={filteredPosts.length} /></strong> live {filteredPosts.length === 1 ? 'drop' : 'drops'}
                   </span>
                   {totalBullsHeading > 0 && (
                     <span className="feed-stat-pill secondary">
                       <Users size={12} aria-hidden="true" />
-                      <strong>{totalBullsHeading}</strong> Bulls heading
+                      <strong><NumberChange value={totalBullsHeading} /></strong> Bulls heading
                     </span>
                   )}
                 </div>
@@ -668,8 +670,19 @@ export default function FeedPage() {
             <section className="feed-list" aria-label="Available campus food posts">
 
               {loading ? (
-                <div className="feed-loading" role="status">
-                  Checking for leftover food nearby…
+                <div className="feed-cards-grid" role="status" aria-label="Checking for leftover food nearby">
+                  {[0, 1, 2].map((n) => (
+                    <div key={n} className="skeleton-card" aria-hidden="true">
+                      <div className="skeleton-block skeleton-media" />
+                      <div className="skeleton-body">
+                        <div className="skeleton-block skeleton-line w-40" />
+                        <div className="skeleton-block skeleton-line w-70" />
+                        <div className="skeleton-block skeleton-line w-55" />
+                        <div className="skeleton-block skeleton-line w-100" />
+                      </div>
+                    </div>
+                  ))}
+                  <span className="sr-only">Checking for leftover food nearby…</span>
                 </div>
               ) : filteredPosts.length === 0 ? (
                 <div className="empty-feed">
@@ -693,7 +706,7 @@ export default function FeedPage() {
                 </div>
               ) : (
                 <div className="feed-cards-grid">
-                  {filteredPosts.map((post) => {
+                  {filteredPosts.map((post, index) => {
                     const isNew = newPostIds.has(post.id);
                     const userClaim = myClaims[post.id];
                     const isClaiming = claimingPostId === post.id;
@@ -711,6 +724,7 @@ export default function FeedPage() {
                       <article
                         key={post.id}
                         className={`post-card ${isNew ? 'new-arrival' : ''} ${isLottery ? 'in-lottery' : ''}`}
+                        style={{ '--i': index } as CSSProperties}
                         aria-labelledby={`post-title-${post.id}`}
                       >
                         {/* Status Banner */}
@@ -786,11 +800,11 @@ export default function FeedPage() {
                           <div className="portions-progress-container" aria-label={`~${servingsLeft} servings left`}>
                             <div className="portions-progress-meta">
                               <span className="portions-live-counter">
-                                <strong>~{servingsLeft}</strong> servings left
+                                <strong>~<NumberChange value={servingsLeft} /></strong> servings left
                               </span>
                               <span className="bulls-traffic-counter">
                                 <Users size={12} aria-hidden="true" />
-                                <span>{bullsHeading} {bullsHeading === 1 ? 'Bull' : 'Bulls'} heading</span>
+                                <span><NumberChange value={bullsHeading} /> {bullsHeading === 1 ? 'Bull' : 'Bulls'} heading</span>
                               </span>
                             </div>
                             <div
@@ -960,9 +974,17 @@ export default function FeedPage() {
       </main>
 
       <StudentFooter />
-      {toastMessage && (
-        <div className="toast-notice" role="status" aria-live="polite">
-          <span>{toastMessage}</span>
+      {toast && (
+        <div
+          key={toast.id}
+          className={`toast-notice${toast.closing ? ' is-closing' : ''}`}
+          role="status"
+          aria-live="polite"
+          onAnimationEnd={() => {
+            if (toast.closing) setToast(null);
+          }}
+        >
+          <span>{toast.message}</span>
         </div>
       )}
       <OnboardingModal

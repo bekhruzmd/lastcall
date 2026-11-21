@@ -1,0 +1,314 @@
+/* LastCall motion layer.
+   One shared scale for durations, easings, distances, scales and blur, plus the
+   reusable transitions built on it. Only transform, opacity and filter animate. */
+
+:root {
+  --duration-stagger: 40ms;
+  --duration-micro: 80ms;
+  --duration-quick: 150ms;
+  --duration-fast: 250ms;
+  --duration-medium: 350ms;
+  --duration-slow: 400ms;
+  --duration-very-slow: 500ms;
+
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-icon: cubic-bezier(0.2, 0, 0, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --ease-shake: cubic-bezier(0.36, 0.07, 0.19, 0.97);
+
+  --distance-micro: 4px;
+  --distance-small: 6px;
+  --distance-base: 8px;
+  --distance-medium: 12px;
+
+  --scale-modal: 0.96;
+
+  --blur-small: 2px;
+  --blur-medium: 3px;
+  --blur-icon: 4px;
+  --blur-large: 8px;
+}
+
+/* ------------------------------------------------------------ Page enter */
+
+/* Opacity only on the wrapper: a transform or filter here would break
+   position: fixed toasts and modals inside the page. */
+.page-enter {
+  animation: page-fade var(--duration-fast) var(--ease-smooth-out) backwards;
+}
+
+.page-enter main {
+  animation: page-rise var(--duration-slow) var(--ease-smooth-out) backwards;
+}
+
+@keyframes page-fade {
+  from { opacity: 0; }
+}
+
+@keyframes page-rise {
+  from { transform: translateY(var(--distance-base)); }
+}
+
+/* ------------------------------------------------------------ Sliding tab pill */
+
+.student-tabs {
+  position: relative;
+  isolation: isolate;
+}
+
+.student-tab-pill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  z-index: -1;
+  border-radius: var(--r-pill);
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--duration-fast) var(--ease-smooth-out),
+    width var(--duration-fast) var(--ease-smooth-out),
+    opacity var(--duration-quick) ease-out;
+}
+
+/* The pill paints the active background, so the tab itself stays clear. */
+.student-tabs:has(.student-tab-pill) .student-tab.active {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------ Number change */
+
+.num-change {
+  display: inline-block;
+}
+
+.num-change-up {
+  animation: num-in-up var(--duration-fast) ease-in-out;
+}
+
+.num-change-down {
+  animation: num-in-down var(--duration-fast) ease-in-out;
+}
+
+@keyframes num-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--distance-micro));
+    filter: blur(var(--blur-small));
+  }
+}
+
+@keyframes num-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--distance-micro) * -1));
+    filter: blur(var(--blur-small));
+  }
+}
+
+/* ------------------------------------------------------------ Icon swap */
+
+.icon-swap {
+  display: inline-grid;
+  place-items: center;
+}
+
+.icon-swap-item {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  transition:
+    opacity var(--duration-fast) var(--ease-icon),
+    scale var(--duration-fast) var(--ease-icon),
+    filter var(--duration-fast) var(--ease-icon);
+}
+
+.icon-swap[data-second='false'] .icon-swap-second,
+.icon-swap[data-second='true'] .icon-swap-first {
+  opacity: 0;
+  scale: 0.25;
+  filter: blur(var(--blur-icon));
+}
+
+/* ------------------------------------------------------------ Success check */
+
+.success-check {
+  flex-shrink: 0;
+  animation: check-pop var(--duration-very-slow) var(--ease-smooth-out) backwards;
+}
+
+.success-check-ring {
+  fill: currentColor;
+  opacity: 0.16;
+}
+
+.success-check-path {
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: check-draw var(--duration-slow) var(--ease-smooth-out) 150ms forwards;
+}
+
+@keyframes check-pop {
+  from {
+    opacity: 0;
+    transform: rotate(-45deg) translateY(var(--distance-small));
+    filter: blur(var(--blur-large));
+  }
+}
+
+@keyframes check-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ------------------------------------------------------------ Skeleton → content */
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.skeleton-block {
+  background: var(--sunken);
+  animation: skeleton-pulse 1.4s linear infinite;
+}
+
+.skeleton-media {
+  height: 190px;
+}
+
+.skeleton-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: var(--r-pill);
+}
+
+.skeleton-line.w-40 { width: 40%; }
+.skeleton-line.w-70 { width: 70%; height: 18px; }
+.skeleton-line.w-55 { width: 55%; }
+.skeleton-line.w-100 { width: 100%; height: 44px; border-radius: var(--r-md); margin-top: 6px; }
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Cards cross-blur in with a short stagger once content arrives. `backwards`
+   so the hover lift still works after the animation ends. */
+.post-card {
+  animation: card-reveal var(--duration-slow) var(--ease-smooth-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 8) * var(--duration-stagger));
+}
+
+@keyframes card-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(var(--distance-medium));
+    filter: blur(var(--blur-small));
+  }
+}
+
+/* ------------------------------------------------------------ Error shake */
+
+.claim-error,
+.shake-on-mount {
+  display: block;
+  animation: error-shake calc(var(--duration-micro) * 5) var(--ease-shake);
+}
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(calc(var(--distance-base) * -1)); }
+  40% { transform: translateX(var(--distance-base)); }
+  60% { transform: translateX(calc(var(--distance-small) * -1)); }
+  80% { transform: translateX(var(--distance-small)); }
+}
+
+/* ------------------------------------------------------------ Toast */
+
+.toast-notice {
+  animation: toast-rise var(--duration-slow) var(--ease-smooth-out);
+}
+
+.toast-notice.is-closing {
+  animation: toast-fall var(--duration-medium) var(--ease-smooth-out) forwards;
+}
+
+@keyframes toast-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, var(--distance-medium)) scale(0.96);
+    filter: blur(var(--blur-small));
+  }
+}
+
+@keyframes toast-fall {
+  to {
+    opacity: 0;
+    transform: translate(-50%, var(--distance-base)) scale(0.98);
+    filter: blur(var(--blur-small));
+  }
+}
+
+/* ------------------------------------------------------------ Modal */
+
+.modal-overlay {
+  animation: overlay-in var(--duration-fast) ease-out;
+}
+
+.modal-card {
+  animation: modal-open var(--duration-fast) var(--ease-smooth-out);
+}
+
+.modal-overlay.is-closing {
+  animation: overlay-out var(--duration-quick) ease-out forwards;
+}
+
+.modal-overlay.is-closing .modal-card {
+  animation: modal-close var(--duration-quick) var(--ease-smooth-out) forwards;
+}
+
+@keyframes overlay-in { from { opacity: 0; } }
+@keyframes overlay-out { to { opacity: 0; } }
+
+@keyframes modal-open {
+  from {
+    opacity: 0;
+    transform: translateY(var(--distance-base)) scale(var(--scale-modal));
+  }
+}
+
+@keyframes modal-close {
+  to {
+    opacity: 0;
+    transform: scale(var(--scale-modal));
+  }
+}
+
+/* ------------------------------------------------------------ Reduced motion */
+
+/* Keep the end states, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .success-check-path {
+    stroke-dashoffset: 0;
+  }
+
+  .skeleton-block {
+    animation: none;
+  }
+}

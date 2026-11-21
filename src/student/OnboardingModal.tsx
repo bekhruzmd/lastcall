@@ -21,7 +21,11 @@ export default function OnboardingModal({ isOpen, onSave, onDismiss }: Onboardin
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, onDismiss]);
 
-  if (!isOpen) return null;
+  // Stay mounted through the close animation, then unmount.
+  const [shown, setShown] = useState(isOpen);
+  if (isOpen && !shown) setShown(true);
+  const closing = shown && !isOpen;
+  if (!shown) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +50,15 @@ export default function OnboardingModal({ isOpen, onSave, onDismiss }: Onboardin
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+    <div
+      className={`modal-overlay${closing ? ' is-closing' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="welcome-title"
+      onAnimationEnd={(e) => {
+        if (closing && e.target === e.currentTarget) setShown(false);
+      }}
+    >
       <div className="modal-card">
         <div className="modal-header">
           <div className="modal-icon" aria-hidden="true">
